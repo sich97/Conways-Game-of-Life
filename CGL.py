@@ -13,9 +13,6 @@ Here is the description of the game from Wikipedia (https://en.wikipedia.org/wik
     It is Turing complete and can simulate a universal constructor or any other Turing machine.
 
 I currently have these next features planned:
-    Saving and loading load seeds from file
-        Saving seeds should be possible after observing the simulation.
-
     Instant resetting
         A user should be able to reset a simulation using a new random seed at any time once the simulation has started.
 
@@ -33,17 +30,21 @@ I currently have these next features planned:
 
 
 import tkinter
+from tkinter import filedialog
 import random
 import time
 from timeit import default_timer as timer
+from datetime import datetime
 
 PRINT_INTRO = False
-GET_USER_INPUT = True
+GET_USER_INPUT = False
 
-DEFAULT_CANVAS_HEIGHT = 150
-DEFAULT_MAX_FRAMERATE = 60
 DEFAULT_MANUAL = False
-DEFAULT_AUTO_SEED = True
+DEFAULT_AUTO_SEED = False
+
+DEFAULT_CANVAS_HEIGHT = 200
+DEFAULT_CANVAS_WIDTH_TO_HEIGHT_RATIO = 1.7778
+DEFAULT_MAX_FRAMERATE = 60
 DEFAULT_MIN_AUTO_SEED_PERCENT = 5
 DEFAULT_MAX_AUTO_SEED_PERCENT = 20
 
@@ -58,7 +59,7 @@ def main():
         print_intro()
 
     # User preferences
-    canvas_height, canvas_width, canvas_area, max_framerate, manual, \
+    canvas_height, canvas_width, max_framerate, manual, \
         auto_seed, min_auto_seed_percent, max_auto_seed_percent = get_user_input()
 
     # Initialization
@@ -66,8 +67,8 @@ def main():
         print("Press any key to start initialization", end="")
         input()
     print("Starting initialization")
-    canvas, grid, drawn_cells = initialize(canvas_width, canvas_height, canvas_area, manual,
-                                           auto_seed, min_auto_seed_percent, max_auto_seed_percent)
+    canvas, grid, drawn_cells = initialize(canvas_width, canvas_height, manual,
+                                                         auto_seed, min_auto_seed_percent, max_auto_seed_percent)
     print("Initialization done")
 
     # Game loop
@@ -152,41 +153,23 @@ def get_user_input():
     auto_seed (bool), min_auto_seed_percent (float), max_auto_seed_percent (float)
     """
 
+    # Sets values based on defaults
+    canvas_height = DEFAULT_CANVAS_HEIGHT
+    canvas_width = int(canvas_height * DEFAULT_CANVAS_WIDTH_TO_HEIGHT_RATIO)
+    max_framerate = 1 / DEFAULT_MAX_FRAMERATE
+    manual = DEFAULT_MANUAL
+    auto_seed = DEFAULT_AUTO_SEED
+    min_auto_seed_percent = DEFAULT_MIN_AUTO_SEED_PERCENT / 100
+    max_auto_seed_percent = DEFAULT_MAX_AUTO_SEED_PERCENT / 100
+
     # Asks the user for input
     if GET_USER_INPUT:
-        print("Now let's set some preferences."
+        print("Let's set some preferences."
               "\nTo disable asking for preferences, change the global variable GET_USER_INPUT to False")
 
-        # Canvas measures
-        print("Please input window height[" + str(DEFAULT_CANVAS_HEIGHT) + "]: ", end="")
-        canvas_height = int(input() or DEFAULT_CANVAS_HEIGHT)
-        canvas_width = int(canvas_height * 1.7778)
-        canvas_area = canvas_height * canvas_width
-
-        # Framerate
-        print("Please input max framerate[" + str(DEFAULT_MAX_FRAMERATE) + "]: ", end="")
-        max_framerate = 1 / int(input() or DEFAULT_MAX_FRAMERATE)
-
-        # Whether or not the user wants to manually progress through the program and between frames
-        print("Do you want manual progression? 1 for yes, 0 for no [", end="")
-
-        if DEFAULT_MANUAL:
-            print("1]: ", end="")
-            temp_input = int(input() or 1)
-            if temp_input == 0:
-                manual = False
-            else:
-                manual = True
-        else:
-            print("0]: ", end="")
-            temp_input = int(input() or 0)
-            if temp_input == 1:
-                manual = True
-            else:
-                manual = False
-
-        # Whether or not the user wants the program to automatically generate a seed or not
-        print("Do you want random seed generation? 1 for yes, 0 for no [", end="")
+        # Whether or not the user wants to create a new simulation or not
+        print("Do you want to generate a new simulation or load an existing one? 1 to create new, 0 to load existing[",
+              end="")
         if DEFAULT_AUTO_SEED:
             print("1]: ", end="")
             temp_input = int(input() or 1)
@@ -202,50 +185,61 @@ def get_user_input():
             else:
                 auto_seed = False
 
-        # If the user wants automatic seeding, ask the user for min and max percentages for seeding
+        # If the user wants automatic seeding, ask the user for desired canvas measures and percentages for seeding
         if auto_seed:
-            # Get minimum seed percent
+            # Canvas height
+            print("Please input window height[" + str(DEFAULT_CANVAS_HEIGHT) + "]: ", end="")
+            canvas_height = int(input() or DEFAULT_CANVAS_HEIGHT)
+
+            # Canvas width
+            print("Please input window width to height ratio (2 makes width double the height)["
+                  + str(DEFAULT_CANVAS_WIDTH_TO_HEIGHT_RATIO) + "]: ", end="")
+            canvas_width = int(canvas_height * (float(input() or DEFAULT_CANVAS_WIDTH_TO_HEIGHT_RATIO)))
+
+            # Minimum seed percent
             print("Please input the minimum percent of the cells you want to start as alive["
                   + str(DEFAULT_MIN_AUTO_SEED_PERCENT) + "]: ", end="")
             temp_input = int(input() or DEFAULT_MIN_AUTO_SEED_PERCENT)
-            min_auto_seed_percent = DEFAULT_MIN_AUTO_SEED_PERCENT / 100
+            min_auto_seed_percent = temp_input / 100
 
-            # Get maximum seed percent
+            # Maximum seed percent
             print("Please input the maximum percent of the cells you want to start as alive["
                   + str(DEFAULT_MAX_AUTO_SEED_PERCENT) + "]: ", end="")
             temp_input = int(input() or DEFAULT_MAX_AUTO_SEED_PERCENT)
-            max_auto_seed_percent = DEFAULT_MAX_AUTO_SEED_PERCENT / 100
+            max_auto_seed_percent = temp_input / 100
 
-        # To avoid referencing variables before assignment
+        # Whether or not the user wants to manually progress through the program and between frames
+        print("Do you want manual progression? 1 for yes, 0 for no [", end="")
+        if DEFAULT_MANUAL:
+            print("1]: ", end="")
+            temp_input = int(input() or 1)
+            if temp_input == 0:
+                manual = False
+            else:
+                manual = True
         else:
-            min_auto_seed_percent = DEFAULT_MIN_AUTO_SEED_PERCENT / 100
-            max_auto_seed_percent = DEFAULT_MAX_AUTO_SEED_PERCENT / 100
+            print("0]: ", end="")
+            temp_input = int(input() or 0)
+            if temp_input == 1:
+                manual = True
+            else:
+                manual = False
 
-    # Sets preferences using default values in the case that GET_USER_INPUT is false
-    else:
-        canvas_height = DEFAULT_CANVAS_HEIGHT
-        canvas_width = int(canvas_height * 1.7778)
-        canvas_area = canvas_height * canvas_width
-        max_framerate = 1 / DEFAULT_MAX_FRAMERATE
-        manual = DEFAULT_MANUAL
-        auto_seed = DEFAULT_AUTO_SEED
-        min_auto_seed_percent = DEFAULT_MIN_AUTO_SEED_PERCENT / 100
-        max_auto_seed_percent = DEFAULT_MAX_AUTO_SEED_PERCENT / 100
+        # Asks for max framerate if the used didn't choose manual progression
+        if not manual:
+            print("Please input max framerate[" + str(DEFAULT_MAX_FRAMERATE) + "]: ", end="")
+            max_framerate = 1 / int(input() or DEFAULT_MAX_FRAMERATE)
 
-    return canvas_height, canvas_width, canvas_area, max_framerate, manual,\
-           auto_seed, min_auto_seed_percent, max_auto_seed_percent
+    return canvas_height, canvas_width, max_framerate, manual, auto_seed, min_auto_seed_percent, max_auto_seed_percent
 
 
-def initialize(canvas_width, canvas_height, canvas_area, manual,
-               auto_seed, min_auto_seed_percent, max_auto_seed_percent):
+def initialize(canvas_width, canvas_height, manual, auto_seed, min_auto_seed_percent, max_auto_seed_percent):
     """
     Prepares the program by initializing variables and applying seed.
     :param canvas_width: The desired width of the canvas in pixels
     :type canvas_width: int
     :param canvas_height: The desired height of the canvas in pixels
     :type canvas_height: int
-    :param canvas_area: The area of the canvas in pixels
-    :type canvas_area: int
     :param manual: Whether or not the user will be asked to proceed
     :type manual: bool
     :param auto_seed: Whether or not the program will generate seed automatically
@@ -254,8 +248,24 @@ def initialize(canvas_width, canvas_height, canvas_area, manual,
     :type min_auto_seed_percent: float
     :param max_auto_seed_percent: The maximum percentage of the grid which will be alive initially
     :type max_auto_seed_percent: float
-    :return: canvas (tkinter.Canvas), grid (2D list), drawn_cells (dict)
+    :return: canvas (tkinter.Canvas), grid (2D list), drawn_cells (dict), current_seed (list of lists)
     """
+
+    current_seed = []
+
+    """
+    A seed from file might have used a different canvas size than the one already specified.
+    So in the case that a seed from file will be used, we overwrite the canvas sizes with the ones used with
+    that seed, before creating canvas and grid size.
+    """
+    if not auto_seed:
+        if manual:
+            print("Press any key to seed initial conditions", end="")
+            input()
+        print("Seeding...")
+        current_seed, canvas_height, canvas_width = load_seed_from_file()
+        print("Seeding complete")
+
     # Creates the graphical window
     if manual:
         print("Press any key to create canvas", end="")
@@ -274,13 +284,17 @@ def initialize(canvas_width, canvas_height, canvas_area, manual,
         grid.append([0] * canvas_width)
     print("List of cells created")
 
-    # Apply seed to the grid
-    if manual:
-        print("Press any key to seed initial conditions", end="")
-        input()
-    print("Seeding...")
-    seed(grid, canvas_area, auto_seed, min_auto_seed_percent, max_auto_seed_percent)
-    print("Seeding complete")
+    # Auto generate seed
+    if auto_seed:
+        if manual:
+            print("Press any key to seed initial conditions", end="")
+            input()
+        print("Seeding...")
+        current_seed = generate_seed(grid, canvas_height, canvas_width, min_auto_seed_percent, max_auto_seed_percent)
+        print("Seeding complete")
+
+    # Applies the seed to the grid
+    apply_seed(grid, current_seed)
 
     # Instantiates the dictionary which will be used to keep track of already drawn pixels
     drawn_cells = {}
@@ -309,46 +323,128 @@ def make_canvas(width, height, title):
     return canvas
 
 
-def seed(grid, canvas_area, auto_seed, min_auto_seed_percent, max_auto_seed_percent):
+def generate_seed(grid, canvas_height, canvas_width, min_auto_seed_percent, max_auto_seed_percent):
     """
-    In the case of auto_seed, random cells in the grid will become alive.
-    Otherwise, a built-in static seed will be used to do the same.
+    Random cells in the grid will be alive initially.
     :param grid: The 2D list of cells
     :type grid: list of lists
-    :param canvas_area: The area of the canvas in pixels
-    :type canvas_area: int
-    :param auto_seed:
-    :type auto_seed: bool
+    :param canvas_height: The height of the canvas in pixels
+    :type canvas_height: int
+    :param canvas_width: The width of the canvas in pixels
+    :type canvas_width: int
     :param min_auto_seed_percent: The minimum percentage of the grid which will be alive initially
     :type min_auto_seed_percent: float
     :param max_auto_seed_percent: The maximum percentage of the grid which will be alive initially
     :type max_auto_seed_percent: float
-    :return: None
+    :return: current_seed (list of lists)
     """
     # Randomly seeds the grid
-    if auto_seed:
-        min_alive_cells = int(canvas_area * min_auto_seed_percent)
-        max_alive_cells = int(canvas_area * max_auto_seed_percent)
-        amount_of_cells_to_seed = random.randint(min_alive_cells, max_alive_cells)
-        print("There will be " + str(amount_of_cells_to_seed) + " living cells initially")
+    current_seed = []
+    min_alive_cells = int((canvas_height * canvas_width) * min_auto_seed_percent)
+    max_alive_cells = int((canvas_height * canvas_width) * max_auto_seed_percent)
+    amount_of_cells_to_seed = random.randint(min_alive_cells, max_alive_cells)
+    print("There will be " + str(amount_of_cells_to_seed) + " living cells initially")
 
-        for i in range(amount_of_cells_to_seed):
-            # Picks out a random row in the grid
-            y = random.randint(0, len(grid) - 1)
+    for i in range(amount_of_cells_to_seed):
+        # Picks out a random row in the grid
+        y = random.randint(0, len(grid) - 1)
 
-            # Picks out a random cell in the row and makes it alive
-            x = random.randint(0, len(grid[y]) - 1)
-            grid[y][x] = 1
+        # Picks out a random cell in the row and makes it alive
+        x = random.randint(0, len(grid[y]) - 1)
 
-    # Seeds the grid using built-in information, mainly used for testing and benchmarking purposes
-    else:
-        grid[0][2] = 1
-        grid[0][3] = 1
-        grid[0][4] = 1
-        grid[1][1] = 1
-        grid[1][5] = 1
-        grid[0][0] = 1
-        grid[0][6] = 1
+        # Add it to current_seed to allow for saving the seed to file and / or resetting simulation with same seed
+        current_seed.append([y, x])
+
+    saved_seed_filename = save_seed_to_file(current_seed, canvas_height, canvas_width)
+
+    return current_seed
+
+
+def save_seed_to_file(current_seed, canvas_height, canvas_width):
+    """
+    Saves the current seed to file under the directory "seeds"
+    :param current_seed: A list of lists containing y, x coordinates of cells that start as alive
+    :type current_seed: list of lists
+    :param canvas_height: The height of the canvas in pixels
+    :type canvas_height: int
+    :param canvas_width: The width of the canvas in pixels
+    :type canvas_width: int
+    :return: filename
+    """
+    # Determines filename including path
+    now = datetime.now()
+    filename_datetime = now.strftime("%Y.%m.%d.%H.%M.%S")
+    filename = "seeds/" + filename_datetime + ".seed"
+
+    # Stores seed in file, one line per cell that starts as alive
+    with open(filename, 'w') as file:
+        file.write("[" + str(canvas_height) + ", " + str(canvas_width) + "]\n")
+        for cell in current_seed:
+            file.write("%s\n" % cell)
+
+    print("Seed saved to: " + filename)
+
+    return filename
+
+
+def load_seed_from_file():
+    """
+    Have the user choose a file to use as seed and then load it into memory
+    :return: current_seed (list of lists), canvas_height (int), canvas_width (int)
+    """
+    # Create a new instance of tkinter
+    root = tkinter.Tk()
+
+    # Hide the tkinter window
+    root.withdraw()
+
+    # Then bring up the file dialog for the user to chose file to use as seed
+    root.update()
+    root.filename = filedialog.askopenfilename(initialdir="seeds/", title="Select file",
+                                               filetypes=(("seed files", "*.seed"), ("all files", "*.*")))
+
+    # Loads seed from file
+    current_seed = []
+    with open(root.filename, "r") as file:
+        for line_number, line in enumerate(file):
+            # Remove string characters
+            cell = line.replace("'", "")
+            cell = cell.replace("\n", "")
+            cell = cell.replace("[", "")
+            cell = cell.replace("]", "")
+            cell = cell.replace(" ", "")
+
+            # Turn it into a list
+            cell = cell.split(",")
+            y = int(cell[0])
+            x = int(cell[1])
+            cell = [y, x]
+
+            # The first line tells us the canvas size used for the saved seed
+            if line_number == 0:
+                canvas_height = y
+                canvas_width = x
+
+            # Add the cell to the current seed
+            else:
+                current_seed.append(cell)
+
+    return current_seed, canvas_height, canvas_width
+
+
+def apply_seed(grid, seed):
+    """
+    For every cell listed in seed, make the corresponding cell in grid alive
+    :param grid: The 2D list of cells
+    :type grid: list of lists
+    :param seed: A list of lists containing coordinates to cells which will shall start as alive
+    :type seed: list of lists
+    :return: None
+    """
+    for cell in seed:
+        y = cell[0]
+        x = cell[1]
+        grid[y][x] = 1
 
 
 def paint_canvas(canvas, grid, drawn_cells):
