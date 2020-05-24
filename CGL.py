@@ -70,8 +70,8 @@ def main():
         input()
     if VERBOSE:
         print("Starting initialization")
-    canvas, grid, drawn_cells = initialize(canvas_width, canvas_height, manual,
-                                                         auto_seed, min_auto_seed_percent, max_auto_seed_percent)
+    canvas, grid, drawn_cells, loop_signal = initialize(canvas_width, canvas_height, manual,
+                                                        auto_seed, min_auto_seed_percent, max_auto_seed_percent)
     if VERBOSE:
         print("Initialization done")
 
@@ -79,10 +79,10 @@ def main():
     if manual:
         print("Press any key to start game", end="")
         input()
-    simulation_loop(canvas, grid, drawn_cells, manual, max_framerate)
+    simulation_loop(canvas, grid, drawn_cells, manual, max_framerate, loop_signal)
 
 
-def simulation_loop(canvas, grid, drawn_cells, manual, max_framerate):
+def simulation_loop(canvas, grid, drawn_cells, manual, max_framerate, loop_signal):
     """
     Generates new generations, draws them on screen, then repeats
     :param canvas: The instance of a tkinter canvas that visualizes the game
@@ -95,6 +95,8 @@ def simulation_loop(canvas, grid, drawn_cells, manual, max_framerate):
     :type manual: bool
     :param max_framerate: The maximum amount of times per second the program will run this loop
     :type max_framerate: float
+    :param loop_signal: The signal which controls whether or not the loop shall continue
+    :type loop_signal: Signal
     :return: None
     """
     # Draws the first frame
@@ -103,7 +105,7 @@ def simulation_loop(canvas, grid, drawn_cells, manual, max_framerate):
 
     start = None
     # Game loop
-    while True:
+    while loop_signal.get_state():
         # No need for timer if manual progression
         if not manual:
             start = timer()
@@ -279,9 +281,9 @@ def initialize(canvas_width, canvas_height, manual, auto_seed, min_auto_seed_per
     :type max_auto_seed_percent: float
     :return: canvas (tkinter.Canvas), grid (2D list), drawn_cells (dict), current_seed (list of lists)
     """
+    loop_signal = Signal("loop_signal", True)
 
     current_seed = []
-
     """
     A seed from file might have used a different canvas size than the one already specified.
     So in the case that a seed from file will be used, we overwrite the canvas sizes with the ones used with
@@ -336,7 +338,43 @@ def initialize(canvas_width, canvas_height, manual, auto_seed, min_auto_seed_per
     # Instantiates the dictionary which will be used to keep track of already drawn pixels
     drawn_cells = {}
 
-    return canvas, grid, drawn_cells
+    return canvas, grid, drawn_cells, loop_signal
+
+
+class Signal:
+    """
+    Mainly used to control and break loops
+    """
+    def __init__(self, name, initial_state):
+        """
+        Sets the signal to the desired initial state.
+        Also stores the name of the object used to create the instance.
+        :param name: The name of the object used when instantiating.
+        :type name: string
+        :param initial_state: The initial signal
+        :type initial_state: bool
+        """
+        self.state = initial_state
+        self.name = name
+
+    def get_state(self):
+        """
+        Returns the current state of the signal
+        :return: self.state (bool)
+        """
+        return self.state
+
+    def set_state(self, new_state):
+        """
+        Sets the signal state to a desired truth value
+        :param new_state: The new truth value
+        :type new_state: bool
+        :return: old_state (bool)
+        """
+        old_state = self.state
+        self.state = new_state
+
+        return old_state
 
 
 def make_canvas(width, height, title):
