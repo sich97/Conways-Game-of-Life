@@ -81,8 +81,10 @@ def main():
         input()
 
     # Draws the first frame
-    paint_canvas(canvas, grid, drawn_cells)
+    draw_canvas(canvas, grid, drawn_cells)
     canvas.update()
+
+    start = None
 
     # Game loop
     while True:
@@ -111,7 +113,7 @@ def main():
         # Visualize the simulation
         if VERBOSE:
             print("Updating visual representation")
-        paint_canvas(canvas, grid, drawn_cells)
+        draw_canvas(canvas, grid, drawn_cells)
         canvas.update()
         if VERBOSE:
             print("Visual representation updated")
@@ -342,6 +344,10 @@ def make_canvas(width, height, title):
     return canvas
 
 
+def test():
+    print("Test")
+
+
 def generate_seed(grid, canvas_height, canvas_width, min_auto_seed_percent, max_auto_seed_percent):
     """
     Random cells in the grid will be alive initially.
@@ -376,6 +382,8 @@ def generate_seed(grid, canvas_height, canvas_width, min_auto_seed_percent, max_
         current_seed.append([y, x])
 
     saved_seed_filename = save_seed_to_file(current_seed, canvas_height, canvas_width)
+    if VERBOSE:
+        print("Seed saved to: " + saved_seed_filename)
 
     return current_seed
 
@@ -401,9 +409,6 @@ def save_seed_to_file(current_seed, canvas_height, canvas_width):
         file.write("[" + str(canvas_height) + ", " + str(canvas_width) + "]\n")
         for cell in current_seed:
             file.write("%s\n" % cell)
-
-    if VERBOSE:
-        print("Seed saved to: " + filename)
 
     return filename
 
@@ -468,7 +473,7 @@ def apply_seed(grid, seed):
         grid[y][x] = 1
 
 
-def paint_canvas(canvas, grid, drawn_cells):
+def draw_canvas(canvas, grid, drawn_cells):
     """
     If a cell is alive, make it white, if not then make it black.
     :param canvas: The instance of a tkinter canvas that visualizes the game
