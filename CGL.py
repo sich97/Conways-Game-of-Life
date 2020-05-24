@@ -36,11 +36,13 @@ import time
 from timeit import default_timer as timer
 from datetime import datetime
 
+VERBOSE = False
+
 PRINT_INTRO = False
 GET_USER_INPUT = False
 
 DEFAULT_MANUAL = False
-DEFAULT_AUTO_SEED = False
+DEFAULT_AUTO_SEED = True
 
 DEFAULT_CANVAS_HEIGHT = 200
 DEFAULT_CANVAS_WIDTH_TO_HEIGHT_RATIO = 1.7778
@@ -66,10 +68,12 @@ def main():
     if manual:
         print("Press any key to start initialization", end="")
         input()
-    print("Starting initialization")
+    if VERBOSE:
+        print("Starting initialization")
     canvas, grid, drawn_cells = initialize(canvas_width, canvas_height, manual,
                                                          auto_seed, min_auto_seed_percent, max_auto_seed_percent)
-    print("Initialization done")
+    if VERBOSE:
+        print("Initialization done")
 
     # Game loop
     if manual:
@@ -92,19 +96,25 @@ def main():
             input()
 
         # Calculates the next generation
-        print("Calculating next generation")
+        if VERBOSE:
+            print("Calculating next generation")
         cells_to_be_killed, cells_to_be_revived, living_cells_before_next_generation = calculate_next_generation(grid)
-        print("Creating next generation")
+        if VERBOSE:
+            print("Creating next generation")
         create_next_generation(grid, cells_to_be_killed, cells_to_be_revived)
-        print("Next generation complete")
+        if VERBOSE:
+            print("Next generation complete")
         cells_alive = living_cells_before_next_generation + len(cells_to_be_revived) - len(cells_to_be_killed)
-        print("\tNumber of cells alive: " + str(cells_alive))
+        if VERBOSE or manual:
+            print("\tNumber of cells alive: " + str(cells_alive))
 
         # Visualize the simulation
-        print("Updating visual representation")
+        if VERBOSE:
+            print("Updating visual representation")
         paint_canvas(canvas, grid, drawn_cells)
         canvas.update()
-        print("Visual representation updated")
+        if VERBOSE:
+            print("Visual representation updated")
 
         # Limits automatic loop to max_framerate
         if not manual:
@@ -112,7 +122,8 @@ def main():
             loop_time = end - start
             if not loop_time > max_framerate:
                 time_to_sleep = max_framerate - loop_time
-                print("Waiting " + str(time_to_sleep) + " seconds")
+                if VERBOSE:
+                    print("Waiting " + str(time_to_sleep) + " seconds")
                 time.sleep(time_to_sleep)
 
 
@@ -262,36 +273,44 @@ def initialize(canvas_width, canvas_height, manual, auto_seed, min_auto_seed_per
         if manual:
             print("Press any key to seed initial conditions", end="")
             input()
-        print("Seeding...")
+        if VERBOSE:
+            print("Seeding...")
         current_seed, canvas_height, canvas_width = load_seed_from_file()
-        print("Seeding complete")
+        if VERBOSE:
+            print("Seeding complete")
 
     # Creates the graphical window
     if manual:
         print("Press any key to create canvas", end="")
         input()
-    print("Creating canvas")
+    if VERBOSE:
+        print("Creating canvas")
     canvas = make_canvas(canvas_width, canvas_height, "Conway's Game of Life")
-    print("Canvas created")
+    if VERBOSE:
+        print("Canvas created")
 
     # Creates the list of cells
     if manual:
         print("Press any key to create list of cells", end="")
         input()
-    print("Creating list of cells")
+    if VERBOSE:
+        print("Creating list of cells")
     grid = []
     for i in range(canvas_height):
         grid.append([0] * canvas_width)
-    print("List of cells created")
+    if VERBOSE:
+        print("List of cells created")
 
     # Auto generate seed
     if auto_seed:
         if manual:
             print("Press any key to seed initial conditions", end="")
             input()
-        print("Seeding...")
+        if VERBOSE:
+            print("Seeding...")
         current_seed = generate_seed(grid, canvas_height, canvas_width, min_auto_seed_percent, max_auto_seed_percent)
-        print("Seeding complete")
+        if VERBOSE:
+            print("Seeding complete")
 
     # Applies the seed to the grid
     apply_seed(grid, current_seed)
@@ -343,7 +362,8 @@ def generate_seed(grid, canvas_height, canvas_width, min_auto_seed_percent, max_
     min_alive_cells = int((canvas_height * canvas_width) * min_auto_seed_percent)
     max_alive_cells = int((canvas_height * canvas_width) * max_auto_seed_percent)
     amount_of_cells_to_seed = random.randint(min_alive_cells, max_alive_cells)
-    print("There will be " + str(amount_of_cells_to_seed) + " living cells initially")
+    if VERBOSE:
+        print("There will be " + str(amount_of_cells_to_seed) + " living cells initially")
 
     for i in range(amount_of_cells_to_seed):
         # Picks out a random row in the grid
@@ -382,7 +402,8 @@ def save_seed_to_file(current_seed, canvas_height, canvas_width):
         for cell in current_seed:
             file.write("%s\n" % cell)
 
-    print("Seed saved to: " + filename)
+    if VERBOSE:
+        print("Seed saved to: " + filename)
 
     return filename
 
