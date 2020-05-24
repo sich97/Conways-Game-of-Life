@@ -79,13 +79,29 @@ def main():
     if manual:
         print("Press any key to start game", end="")
         input()
+    simulation_loop(canvas, grid, drawn_cells, manual, max_framerate)
 
+
+def simulation_loop(canvas, grid, drawn_cells, manual, max_framerate):
+    """
+    Generates new generations, draws them on screen, then repeats
+    :param canvas: The instance of a tkinter canvas that visualizes the game
+    :type canvas: tkinter.Canvas
+    :param grid: The 2D list of cells
+    :type grid: list of lists
+    :param drawn_cells: The dictionary of already rendered pixels
+    :type drawn_cells: dict
+    :param manual: Whether or not the user will be asked to press a key between program events
+    :type manual: bool
+    :param max_framerate: The maximum amount of times per second the program will run this loop
+    :type max_framerate: float
+    :return: None
+    """
     # Draws the first frame
     draw_canvas(canvas, grid, drawn_cells)
     canvas.update()
 
     start = None
-
     # Game loop
     while True:
         # No need for timer if manual progression
@@ -342,10 +358,6 @@ def make_canvas(width, height, title):
     canvas.pack()
 
     return canvas
-
-
-def test():
-    print("Test")
 
 
 def generate_seed(grid, canvas_height, canvas_width, min_auto_seed_percent, max_auto_seed_percent):
