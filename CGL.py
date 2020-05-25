@@ -13,8 +13,11 @@ Here is the description of the game from Wikipedia (https://en.wikipedia.org/wik
     It is Turing complete and can simulate a universal constructor or any other Turing machine.
 
 I currently have these next features planned:
-    Instant resetting
-        A user should be able to reset a simulation using a new random seed at any time once the simulation has started.
+    Allow for generating new simulations even if the user started the program by loading seed from file
+
+    Move get_use_input functionality over to GUI
+
+    Ability to load saved seeds as new simulation from GUI
 
     Zooming, panning and procedural generation
         This would require a substantial rewrite of most, if not all, of the code
@@ -27,8 +30,6 @@ I currently have these next features planned:
 
         This also will require a substantial rewrite.
 """
-
-
 import tkinter
 from tkinter import filedialog
 import random
@@ -36,14 +37,12 @@ import time
 from timeit import default_timer as timer
 from datetime import datetime
 
-VERBOSE = False
-
-PRINT_INTRO = False
-GET_USER_INPUT = False
 
 DEFAULT_MANUAL = False
+VERBOSE = False
+PRINT_INTRO = True
+GET_USER_INPUT = True
 DEFAULT_AUTO_SEED = True
-
 DEFAULT_CANVAS_HEIGHT = 200
 DEFAULT_CANVAS_WIDTH_TO_HEIGHT_RATIO = 1.7778
 DEFAULT_MAX_FRAMERATE = 60
@@ -53,7 +52,7 @@ DEFAULT_MAX_AUTO_SEED_PERCENT = 20
 
 def main():
     """
-    Run game of life.
+    Initializes. Then repeatedly runs simulations after another.
     :return: None
     """
     # Intro message
@@ -70,81 +69,22 @@ def main():
         input()
     if VERBOSE:
         print("Starting initialization")
-    canvas, grid, drawn_cells, loop_signal = initialize(canvas_width, canvas_height, manual,
-                                                        auto_seed, min_auto_seed_percent, max_auto_seed_percent)
+    canvas, loop_signal, drawn_cells, current_seed = initialize(canvas_height, canvas_width, manual, auto_seed)
     if VERBOSE:
         print("Initialization done")
 
     # Game loop
     if manual:
-        print("Press any key to start game", end="")
+        print("Press any key to start the game loop", end="")
         input()
-    simulation_loop(canvas, grid, drawn_cells, manual, max_framerate, loop_signal)
+    while True:
+        # Create new simulation
+        grid = new_simulation(manual, canvas_height, canvas_width, auto_seed, min_auto_seed_percent,
+                                           max_auto_seed_percent, canvas, drawn_cells, current_seed)
 
-
-def simulation_loop(canvas, grid, drawn_cells, manual, max_framerate, loop_signal):
-    """
-    Generates new generations, draws them on screen, then repeats
-    :param canvas: The instance of a tkinter canvas that visualizes the game
-    :type canvas: tkinter.Canvas
-    :param grid: The 2D list of cells
-    :type grid: list of lists
-    :param drawn_cells: The dictionary of already rendered pixels
-    :type drawn_cells: dict
-    :param manual: Whether or not the user will be asked to press a key between program events
-    :type manual: bool
-    :param max_framerate: The maximum amount of times per second the program will run this loop
-    :type max_framerate: float
-    :param loop_signal: The signal which controls whether or not the loop shall continue
-    :type loop_signal: Signal
-    :return: None
-    """
-    # Draws the first frame
-    draw_canvas(canvas, grid, drawn_cells)
-    canvas.update()
-
-    start = None
-    # Game loop
-    while loop_signal.get_state():
-        # No need for timer if manual progression
-        if not manual:
-            start = timer()
-
-        # If the user wants to move frames manually
-        if manual:
-            print("Press any key to move to next frame ...", end="")
-            input()
-
-        # Calculates the next generation
-        if VERBOSE:
-            print("Calculating next generation")
-        cells_to_be_killed, cells_to_be_revived, living_cells_before_next_generation = calculate_next_generation(grid)
-        if VERBOSE:
-            print("Creating next generation")
-        create_next_generation(grid, cells_to_be_killed, cells_to_be_revived)
-        if VERBOSE:
-            print("Next generation complete")
-        cells_alive = living_cells_before_next_generation + len(cells_to_be_revived) - len(cells_to_be_killed)
-        if VERBOSE or manual:
-            print("\tNumber of cells alive: " + str(cells_alive))
-
-        # Visualize the simulation
-        if VERBOSE:
-            print("Updating visual representation")
-        draw_canvas(canvas, grid, drawn_cells)
-        canvas.update()
-        if VERBOSE:
-            print("Visual representation updated")
-
-        # Limits automatic loop to max_framerate
-        if not manual:
-            end = timer()
-            loop_time = end - start
-            if not loop_time > max_framerate:
-                time_to_sleep = max_framerate - loop_time
-                if VERBOSE:
-                    print("Waiting " + str(time_to_sleep) + " seconds")
-                time.sleep(time_to_sleep)
+        # Simulate simulation
+        loop_signal.set_state(True)
+        simulation_loop(canvas, grid, drawn_cells, manual, max_framerate, loop_signal)
 
 
 def print_intro():
@@ -180,7 +120,7 @@ def print_intro():
 def get_user_input():
     """
     Asks the user for input in order to set preferences.
-    :return: canvas_height (int), canvas_width (int), canvas_area (int), max_framerate (float), manual (bool),
+    :return: canvas_height (int), canvas_width (int), max_framerate (float), manual (bool),
     auto_seed (bool), min_auto_seed_percent (float), max_auto_seed_percent (float)
     """
 
@@ -264,31 +204,26 @@ def get_user_input():
     return canvas_height, canvas_width, max_framerate, manual, auto_seed, min_auto_seed_percent, max_auto_seed_percent
 
 
-def initialize(canvas_width, canvas_height, manual, auto_seed, min_auto_seed_percent, max_auto_seed_percent):
+def initialize(canvas_height, canvas_width, manual, auto_seed):
     """
     Prepares the program by initializing variables and applying seed.
-    :param canvas_width: The desired width of the canvas in pixels
-    :type canvas_width: int
     :param canvas_height: The desired height of the canvas in pixels
     :type canvas_height: int
+    :param canvas_width: The desired width of the canvas in pixels
+    :type canvas_width: int
     :param manual: Whether or not the user will be asked to proceed
     :type manual: bool
     :param auto_seed: Whether or not the program will generate seed automatically
     :type auto_seed: bool
-    :param min_auto_seed_percent: The minimum percentage of the grid which will be alive initially
-    :type min_auto_seed_percent: float
-    :param max_auto_seed_percent: The maximum percentage of the grid which will be alive initially
-    :type max_auto_seed_percent: float
-    :return: canvas (tkinter.Canvas), grid (2D list), drawn_cells (dict), current_seed (list of lists)
+    :return: canvas (tkinter.Canvas), loop_signal (Signal), drawn_cells (dict), current_seed (list of lists)
     """
-    loop_signal = Signal("loop_signal", True)
 
-    current_seed = []
     """
     A seed from file might have used a different canvas size than the one already specified.
     So in the case that a seed from file will be used, we overwrite the canvas sizes with the ones used with
     that seed, before creating canvas and grid size.
     """
+    current_seed = None
     if not auto_seed:
         if manual:
             print("Press any key to seed initial conditions", end="")
@@ -305,167 +240,19 @@ def initialize(canvas_width, canvas_height, manual, auto_seed, min_auto_seed_per
         input()
     if VERBOSE:
         print("Creating canvas")
-    canvas = make_canvas(canvas_width, canvas_height, "Conway's Game of Life")
+    loop_signal = Signal("loop_signal", True)
+    canvas = make_canvas(canvas_height, canvas_width, "Conway's Game of Life", loop_signal, auto_seed)
     if VERBOSE:
         print("Canvas created")
 
-    # Creates the list of cells
-    if manual:
-        print("Press any key to create list of cells", end="")
-        input()
-    if VERBOSE:
-        print("Creating list of cells")
-    grid = []
-    for i in range(canvas_height):
-        grid.append([0] * canvas_width)
-    if VERBOSE:
-        print("List of cells created")
-
-    # Auto generate seed
-    if auto_seed:
-        if manual:
-            print("Press any key to seed initial conditions", end="")
-            input()
-        if VERBOSE:
-            print("Seeding...")
-        current_seed = generate_seed(grid, canvas_height, canvas_width, min_auto_seed_percent, max_auto_seed_percent)
-        if VERBOSE:
-            print("Seeding complete")
-
-    # Applies the seed to the grid
-    apply_seed(grid, current_seed)
-
-    # Instantiates the dictionary which will be used to keep track of already drawn pixels
     drawn_cells = {}
 
-    return canvas, grid, drawn_cells, loop_signal
-
-
-class Signal:
-    """
-    Mainly used to control and break loops
-    """
-    def __init__(self, name, initial_state):
-        """
-        Sets the signal to the desired initial state.
-        Also stores the name of the object used to create the instance.
-        :param name: The name of the object used when instantiating.
-        :type name: string
-        :param initial_state: The initial signal
-        :type initial_state: bool
-        """
-        self.state = initial_state
-        self.name = name
-
-    def get_state(self):
-        """
-        Returns the current state of the signal
-        :return: self.state (bool)
-        """
-        return self.state
-
-    def set_state(self, new_state):
-        """
-        Sets the signal state to a desired truth value
-        :param new_state: The new truth value
-        :type new_state: bool
-        :return: old_state (bool)
-        """
-        old_state = self.state
-        self.state = new_state
-
-        return old_state
-
-
-def make_canvas(width, height, title):
-    """
-    Uses tkinter to create an instance of a canvas to be used for visualizing the game.
-    :param width: The width of the canvas in pixels
-    :type width: int
-    :param height: The height of the canvas in pixels
-    :type height: int
-    :param title: The window title
-    :type title: string
-    :return: canvas (tkinter.Canvas)
-    """
-    top = tkinter.Tk()
-    top.minsize(width=width, height=height)
-    top.title(title)
-    canvas = tkinter.Canvas(top, width=width + 1, height=height + 1)
-    canvas.config(bg="black")
-    canvas.pack()
-
-    return canvas
-
-
-def generate_seed(grid, canvas_height, canvas_width, min_auto_seed_percent, max_auto_seed_percent):
-    """
-    Random cells in the grid will be alive initially.
-    :param grid: The 2D list of cells
-    :type grid: list of lists
-    :param canvas_height: The height of the canvas in pixels
-    :type canvas_height: int
-    :param canvas_width: The width of the canvas in pixels
-    :type canvas_width: int
-    :param min_auto_seed_percent: The minimum percentage of the grid which will be alive initially
-    :type min_auto_seed_percent: float
-    :param max_auto_seed_percent: The maximum percentage of the grid which will be alive initially
-    :type max_auto_seed_percent: float
-    :return: current_seed (list of lists)
-    """
-    # Randomly seeds the grid
-    current_seed = []
-    min_alive_cells = int((canvas_height * canvas_width) * min_auto_seed_percent)
-    max_alive_cells = int((canvas_height * canvas_width) * max_auto_seed_percent)
-    amount_of_cells_to_seed = random.randint(min_alive_cells, max_alive_cells)
-    if VERBOSE:
-        print("There will be " + str(amount_of_cells_to_seed) + " living cells initially")
-
-    for i in range(amount_of_cells_to_seed):
-        # Picks out a random row in the grid
-        y = random.randint(0, len(grid) - 1)
-
-        # Picks out a random cell in the row and makes it alive
-        x = random.randint(0, len(grid[y]) - 1)
-
-        # Add it to current_seed to allow for saving the seed to file and / or resetting simulation with same seed
-        current_seed.append([y, x])
-
-    saved_seed_filename = save_seed_to_file(current_seed, canvas_height, canvas_width)
-    if VERBOSE:
-        print("Seed saved to: " + saved_seed_filename)
-
-    return current_seed
-
-
-def save_seed_to_file(current_seed, canvas_height, canvas_width):
-    """
-    Saves the current seed to file under the directory "seeds"
-    :param current_seed: A list of lists containing y, x coordinates of cells that start as alive
-    :type current_seed: list of lists
-    :param canvas_height: The height of the canvas in pixels
-    :type canvas_height: int
-    :param canvas_width: The width of the canvas in pixels
-    :type canvas_width: int
-    :return: filename
-    """
-    # Determines filename including path
-    now = datetime.now()
-    filename_datetime = now.strftime("%Y.%m.%d.%H.%M.%S")
-    filename = "seeds/" + filename_datetime + ".seed"
-
-    # Stores seed in file, one line per cell that starts as alive
-    with open(filename, 'w') as file:
-        file.write("[" + str(canvas_height) + ", " + str(canvas_width) + "]\n")
-        for cell in current_seed:
-            file.write("%s\n" % cell)
-
-    return filename
+    return canvas, loop_signal, drawn_cells, current_seed
 
 
 def load_seed_from_file():
     """
-    Have the user choose a file to use as seed and then load it into memory
+    Have the user choose a file to use as seed and then load it into memory.
     :return: current_seed (list of lists), canvas_height (int), canvas_width (int)
     """
     # Create a new instance of tkinter
@@ -494,7 +281,6 @@ def load_seed_from_file():
             cell = cell.split(",")
             y = int(cell[0])
             x = int(cell[1])
-            cell = [y, x]
 
             # The first line tells us the canvas size used for the saved seed
             if line_number == 0:
@@ -503,9 +289,175 @@ def load_seed_from_file():
 
             # Add the cell to the current seed
             else:
+                cell = [y, x]
                 current_seed.append(cell)
 
     return current_seed, canvas_height, canvas_width
+
+
+def make_canvas(height, width, title, loop_signal, auto_seed):
+    """
+    Uses tkinter to create an instance of a canvas to be used for visualizing the game.
+    :param width: The width of the canvas in pixels
+    :type width: int
+    :param height: The height of the canvas in pixels
+    :type height: int
+    :param title: The window title
+    :type title: string
+    :param loop_signal: The signal which controls whether or not the loop shall continue
+    :type loop_signal: Signal
+    :param auto_seed: Whether or not the user wants to generate a new simulation or load from file
+    :type auto_seed: bool
+    :return: canvas (tkinter.Canvas)
+    """
+    top = tkinter.Tk()
+    top.minsize(width=width, height=height)
+    top.title(title)
+    canvas = tkinter.Canvas(top, width=width + 1, height=height + 1)
+    canvas.config(bg="black")
+    canvas.pack()
+
+    if auto_seed:
+        button_name = "Generate new"
+    else:
+        button_name = "Replay"
+    button_new_sim = tkinter.Button(top, text=button_name, command=lambda: loop_signal.set_state(False))
+    button_new_sim.pack()
+
+    return canvas
+
+
+def new_simulation(manual, canvas_height, canvas_width, auto_seed, min_auto_seed_percent, max_auto_seed_percent,
+                   canvas, drawn_cells, current_seed):
+    """
+    Resets necessary variables and generates new values for next simulation.
+    :param manual: Whether or not the user will be asked to press a key between program events
+    :type manual: bool
+    :param canvas_height: The desired height of the canvas in pixels
+    :type canvas_height: int
+    :param canvas_width: The desired height of the canvas in pixels
+    :type canvas_width: int
+    :param auto_seed: Whether or not to generate new seed or load from file
+    :type auto_seed: bool
+    :param min_auto_seed_percent: The minimum percentage of the grid which will be alive initially
+    :type min_auto_seed_percent: float
+    :param max_auto_seed_percent: The maximum percentage of the grid which will be alive initially
+    :type max_auto_seed_percent: float
+    :param canvas: The instance of a tkinter canvas that visualizes the game
+    :type canvas: tkinter.Canvas
+    :param drawn_cells: The dictionary of already rendered pixels
+    :type drawn_cells: dict
+    :param current_seed: A list containing cell coordinates for which should be alive initially
+    :type current_seed: list of lists
+    :return: grid (list of lists)
+    """
+    # Reset
+    grid = []
+    for rectangle_name in drawn_cells:
+        canvas.delete(drawn_cells[rectangle_name])
+
+    # Creates the list of cells
+    if manual:
+        print("Press any key to create list of cells", end="")
+        input()
+    if VERBOSE:
+        print("Creating list of cells")
+    for i in range(canvas_height):
+        grid.append([0] * canvas_width)
+    if VERBOSE:
+        print("List of cells created")
+
+    # Seed
+    if not auto_seed:
+        # Applies the seed to the grid
+        apply_seed(grid, current_seed)
+
+    elif auto_seed:
+        if manual:
+            print("Press any key to generate random initial conditions", end="")
+            input()
+        if VERBOSE:
+            print("Seeding...")
+
+        # Generate seed
+        current_seed = generate_seed(grid, canvas_height, canvas_width, min_auto_seed_percent, max_auto_seed_percent)
+
+        # Applies the seed to the grid
+        apply_seed(grid, current_seed)
+
+    if VERBOSE:
+        print("Seeding complete")
+
+    return grid
+
+
+def generate_seed(grid, canvas_height, canvas_width, min_auto_seed_percent, max_auto_seed_percent):
+    """
+    Generates a list of cells that will be alive initially.
+    :param grid: The 2D list of cells
+    :type grid: list of lists
+    :param canvas_height: The height of the canvas in pixels
+    :type canvas_height: int
+    :param canvas_width: The width of the canvas in pixels
+    :type canvas_width: int
+    :param min_auto_seed_percent: The minimum percentage of the grid which will be alive initially
+    :type min_auto_seed_percent: float
+    :param max_auto_seed_percent: The maximum percentage of the grid which will be alive initially
+    :type max_auto_seed_percent: float
+    :return: current_seed (list of lists)
+    """
+    # Prepares variables
+    current_seed = []
+    min_alive_cells = int((canvas_height * canvas_width) * min_auto_seed_percent)
+    max_alive_cells = int((canvas_height * canvas_width) * max_auto_seed_percent)
+    amount_of_cells_to_seed = random.randint(min_alive_cells, max_alive_cells)
+    if VERBOSE:
+        print("There will be " + str(amount_of_cells_to_seed) + " living cells initially")
+
+    # Generates random seed
+    for i in range(amount_of_cells_to_seed):
+        # Picks out a random row in the grid
+        y = random.randint(0, len(grid) - 1)
+
+        # Picks out a random cell in the row and makes it alive
+        x = random.randint(0, len(grid[y]) - 1)
+
+        # Add it to current_seed to allow for saving the seed to file and / or resetting simulation with same seed
+        current_seed.append([y, x])
+
+    # Save seed to file, named with date and time (.seed extension)
+    saved_seed_filename = save_seed_to_file(current_seed, canvas_height, canvas_width)
+    if VERBOSE:
+        print("Seed saved to: " + saved_seed_filename)
+
+    return current_seed
+
+
+def save_seed_to_file(current_seed, canvas_height, canvas_width):
+    """
+    Saves the current seed as a file.
+    Location: seeds/
+    File extension: .seed
+    :param current_seed: A list of lists containing y, x coordinates of cells that start as alive
+    :type current_seed: list of lists
+    :param canvas_height: The height of the canvas in pixels
+    :type canvas_height: int
+    :param canvas_width: The width of the canvas in pixels
+    :type canvas_width: int
+    :return: filename
+    """
+    # Determines filename including path
+    now = datetime.now()
+    filename_datetime = now.strftime("%Y.%m.%d.%H.%M.%S")
+    filename = "seeds/" + filename_datetime + ".seed"
+
+    # Stores seed in file, one line per cell that starts as alive
+    with open(filename, 'w') as file:
+        file.write("[" + str(canvas_height) + ", " + str(canvas_width) + "]\n")
+        for cell in current_seed:
+            file.write("%s\n" % cell)
+
+    return filename
 
 
 def apply_seed(grid, seed):
@@ -521,6 +473,71 @@ def apply_seed(grid, seed):
         y = cell[0]
         x = cell[1]
         grid[y][x] = 1
+
+
+def simulation_loop(canvas, grid, drawn_cells, manual, max_framerate, loop_signal):
+    """
+    Generates new generations, draws them on screen, then repeats.
+    :param canvas: The instance of a tkinter canvas that visualizes the game
+    :type canvas: tkinter.Canvas
+    :param grid: The 2D list of cells
+    :type grid: list of lists
+    :param drawn_cells: The dictionary of already rendered pixels
+    :type drawn_cells: dict
+    :param manual: Whether or not the user will be asked to press a key between program events
+    :type manual: bool
+    :param max_framerate: The maximum amount of times per second the program will run this loop
+    :type max_framerate: float
+    :param loop_signal: The signal which controls whether or not the loop shall continue
+    :type loop_signal: Signal
+    :return: None
+    """
+    # Draws the first frame
+    draw_canvas(canvas, grid, drawn_cells)
+    canvas.update()
+
+    start = None
+    # Game loop
+    while loop_signal.get_state():
+        # No need for timer if manual progression
+        if not manual:
+            start = timer()
+
+        # If the user wants to move frames manually
+        if manual:
+            print("Press any key to move to next frame ...", end="")
+            input()
+
+        # Calculates the next generation
+        if VERBOSE:
+            print("Calculating next generation")
+        cells_to_be_killed, cells_to_be_revived, living_cells_before_next_generation = calculate_next_generation(grid)
+        if VERBOSE:
+            print("Creating next generation")
+        create_next_generation(grid, cells_to_be_killed, cells_to_be_revived)
+        if VERBOSE:
+            print("Next generation complete")
+        cells_alive = living_cells_before_next_generation + len(cells_to_be_revived) - len(cells_to_be_killed)
+        if VERBOSE or manual:
+            print("\tNumber of cells alive: " + str(cells_alive))
+
+        # Visualize the simulation
+        if VERBOSE:
+            print("Updating visual representation")
+        draw_canvas(canvas, grid, drawn_cells)
+        canvas.update()
+        if VERBOSE:
+            print("Visual representation updated")
+
+        # Limits automatic loop to max_framerate
+        if not manual:
+            end = timer()
+            loop_time = end - start
+            if not loop_time > max_framerate:
+                time_to_sleep = max_framerate - loop_time
+                if VERBOSE:
+                    print("Waiting " + str(time_to_sleep) + " seconds")
+                time.sleep(time_to_sleep)
 
 
 def draw_canvas(canvas, grid, drawn_cells):
@@ -722,6 +739,42 @@ def create_next_generation(grid, cells_to_be_killed, cells_to_be_revived):
         y = cells_to_be_revived[cell][0]
         x = cells_to_be_revived[cell][1]
         grid[y][x] = 1
+
+
+class Signal:
+    """
+    Mainly used to control and break loops
+    """
+    def __init__(self, name, initial_state):
+        """
+        Sets the signal to the desired initial state.
+        Also stores the name of the object used to create the instance.
+        :param name: The name of the object used when instantiating.
+        :type name: string
+        :param initial_state: The initial signal
+        :type initial_state: bool
+        """
+        self.state = initial_state
+        self.name = name
+
+    def get_state(self):
+        """
+        Returns the current state of the signal
+        :return: self.state (bool)
+        """
+        return self.state
+
+    def set_state(self, new_state):
+        """
+        Sets the signal state to a desired truth value
+        :param new_state: The new truth value
+        :type new_state: bool
+        :return: old_state (bool)
+        """
+        old_state = self.state
+        self.state = new_state
+
+        return old_state
 
 
 if __name__ == '__main__':
