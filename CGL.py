@@ -36,12 +36,13 @@ import random
 import time
 from timeit import default_timer as timer
 from datetime import datetime
+import pathlib
 
 
 DEFAULT_MANUAL = False
 VERBOSE = False
-PRINT_INTRO = True
-GET_USER_INPUT = True
+PRINT_INTRO = False
+GET_USER_INPUT = False
 DEFAULT_AUTO_SEED = True
 DEFAULT_CANVAS_HEIGHT = 200
 DEFAULT_CANVAS_WIDTH_TO_HEIGHT_RATIO = 1.7778
@@ -437,6 +438,7 @@ def save_seed_to_file(current_seed, canvas_height, canvas_width):
     """
     Saves the current seed as a file.
     Location: seeds/
+    Filename: yyyy.mm.dd.HH.MM.SS
     File extension: .seed
     :param current_seed: A list of lists containing y, x coordinates of cells that start as alive
     :type current_seed: list of lists
@@ -448,16 +450,19 @@ def save_seed_to_file(current_seed, canvas_height, canvas_width):
     """
     # Determines filename including path
     now = datetime.now()
-    filename_datetime = now.strftime("%Y.%m.%d.%H.%M.%S")
-    filename = "seeds/" + filename_datetime + ".seed"
+    filename = now.strftime("%Y.%m.%d.%H.%M.%S") + ".seed"
+    seed_dir = pathlib.Path("seeds/")
+    seed_dir.mkdir(parents=True, exist_ok=True)
+    file_path = pathlib.Path("seeds/" + filename)
 
     # Stores seed in file, one line per cell that starts as alive
-    with open(filename, 'w') as file:
+
+    with file_path.open('w') as file:
         file.write("[" + str(canvas_height) + ", " + str(canvas_width) + "]\n")
         for cell in current_seed:
             file.write("%s\n" % cell)
 
-    return filename
+    return file_path.absolute()
 
 
 def apply_seed(grid, seed):
