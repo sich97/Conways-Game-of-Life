@@ -23,11 +23,11 @@ import pathlib
 
 DEFAULT_MANUAL = False
 VERBOSE = False
-PRINT_INTRO = True
-GET_USER_INPUT = True
+PRINT_INTRO = False
+GET_USER_INPUT = False
 DEFAULT_AUTO_SEED = True
-DEFAULT_CANVAS_HEIGHT = 200
-DEFAULT_CANVAS_WIDTH_TO_HEIGHT_RATIO = 1.7778
+DEFAULT_CANVAS_HEIGHT = 50
+DEFAULT_CANVAS_WIDTH_TO_HEIGHT_RATIO = 1
 DEFAULT_MAX_FRAMERATE = 60
 DEFAULT_MIN_AUTO_SEED_PERCENT = 5
 DEFAULT_MAX_AUTO_SEED_PERCENT = 20
@@ -52,7 +52,7 @@ def main():
         input()
     if VERBOSE:
         print("Starting initialization")
-    drawn_cells, loop_signal, top, canvas, restart_button = initialize(manual, auto_seed)
+    drawn_cells, loop_signal, pause_signal, top, canvas, restart_button, pause_button = initialize(manual, auto_seed)
     if VERBOSE:
         print("Initialization done")
 
@@ -67,7 +67,7 @@ def main():
 
         # Simulate simulation
         loop_signal.set_state(True)
-        simulation_loop(max_framerate, manual, drawn_cells, loop_signal, canvas, grid)
+        simulation_loop(max_framerate, manual, drawn_cells, loop_signal, pause_signal, canvas, pause_button, grid)
 
 
 def print_intro():
@@ -194,19 +194,21 @@ def initialize(manual, auto_seed):
     :type manual: bool
     :param auto_seed: Whether or not the program will generate seed automatically
     :type auto_seed: bool
-    :return: drawn_cells (dict), loop_signal (Signal), top (tkinter.Tk), canvas (tkinter.Canvas),
-    button_new_sim (tkinter.Button)
+    :return: drawn_cells (dict), loop_signal (Signal), pause_signal (Signal), top (tkinter.Tk), canvas (tkinter.Canvas),
+    button_new_sim (tkinter.Button), button_pause_sim (tkinter.Button)
     """
     drawn_cells = {}
     loop_signal = Signal("loop_signal", True)
+    pause_signal = Signal("pause_signal", False)
 
     # Creates the graphical window
     if manual:
         print("Press any key to create canvas", end="")
         input()
-    top, canvas, button_new_sim = make_canvas("Conway's Game of Life", loop_signal, auto_seed)
+    top, canvas, button_new_sim, button_pause_sim = make_canvas("Conway's Game of Life", loop_signal, pause_signal,
+                                                                auto_seed)
 
-    return drawn_cells, loop_signal, top, canvas, button_new_sim
+    return drawn_cells, loop_signal, pause_signal, top, canvas, button_new_sim, button_pause_sim
 
 
 def load_seed_from_file():
@@ -260,16 +262,19 @@ def load_seed_from_file():
     return current_seed, canvas_height, canvas_width
 
 
-def make_canvas(title, loop_signal, auto_seed):
+def make_canvas(title, loop_signal, pause_signal, auto_seed):
     """
     Uses tkinter to create a graphical user interface for visualizing the simulation and controlling the program.
     :param title: The window title
     :type title: string
-    :param loop_signal: The signal which controls whether or not the loop shall continue
+    :param loop_signal: The signal which controls whether or not to break the loop
     :type loop_signal: Signal
+    :param pause_signal: The signal which controls whether or not to pause the loop
+    :type pause_signal: Signal
     :param auto_seed: Whether or not the user wants to generate a new simulation or load from file
     :type auto_seed: bool
-    :return: top (tkinter.Tk), canvas (tkinter.Canvas), button_new_sim (tkinter.Button)
+    :return: top (tkinter.Tk), canvas (tkinter.Canvas), button_new_sim (tkinter.Button),
+    button_pause_sim (tkinter.Button)
     """
     if VERBOSE:
         print("Creating canvas")
@@ -291,10 +296,14 @@ def make_canvas(title, loop_signal, auto_seed):
     button_new_sim = tkinter.Button(top, text=button_name, command=lambda: loop_signal.set_state(False))
     button_new_sim.pack()
 
+    # Button for pausing the simulation
+    button_pause_sim = tkinter.Button(top, text="Pause", command=lambda: pause_signal.change_state())
+    button_pause_sim.pack()
+
     if VERBOSE:
         print("Canvas created")
 
-    return top, canvas, button_new_sim
+    return top, canvas, button_new_sim, button_pause_sim
 
 
 def new_simulation(canvas_height, canvas_width, manual, auto_seed, min_auto_seed_percent, max_auto_seed_percent,
@@ -500,7 +509,7 @@ def apply_seed(grid, seed):
         print("Seed applied")
 
 
-def simulation_loop(max_framerate, manual, drawn_cells, loop_signal, canvas, grid):
+def simulation_loop(max_framerate, manual, drawn_cells, loop_signal, pause_signal, canvas, pause_button, grid):
     """
     Generates new generations, draws them on screen, then repeats.
     :param max_framerate: The maximum amount of times per second the program will run this loop
@@ -509,10 +518,14 @@ def simulation_loop(max_framerate, manual, drawn_cells, loop_signal, canvas, gri
     :type manual: bool
     :param drawn_cells: The dictionary of already rendered pixels
     :type drawn_cells: dict
-    :param loop_signal: The signal which controls whether or not the loop shall continue
+    :param loop_signal: The signal which controls whether or not to break the loop
     :type loop_signal: Signal
+    :param pause_signal: The signal which controls whether or not to pause the loop
+    :type pause_signal: Signal
     :param canvas: The instance of a tkinter canvas that visualizes the game
     :type canvas: tkinter.Canvas
+    :param pause_button: The button which changes the pause_signal
+    :type pause_button: tkinter.Button
     :param grid: The 2D list of cells
     :type grid: list of lists
     :return: None
@@ -534,23 +547,33 @@ def simulation_loop(max_framerate, manual, drawn_cells, loop_signal, canvas, gri
         if not manual:
             start = timer()
 
-        # If the user wants to move frames manually
-        if manual:
-            print("Press any key to move to next frame ...", end="")
-            input()
+        # Only calculate and create new generations if the pause signal is not true
+        if not pause_signal.get_state():
+            # Set the pause button's text to "Pause"
+            pause_button.config(text="Pause")
 
-        # Calculates the next generation
-        if VERBOSE:
-            print("Calculating next generation")
-        cells_to_be_killed, cells_to_be_revived, living_cells_before_next_generation = calculate_next_generation(grid)
-        if VERBOSE:
-            print("Creating next generation")
-        create_next_generation(grid, cells_to_be_killed, cells_to_be_revived)
-        if VERBOSE:
-            print("Next generation complete")
-        cells_alive = living_cells_before_next_generation + len(cells_to_be_revived) - len(cells_to_be_killed)
-        if VERBOSE or manual:
-            print("\tNumber of cells alive: " + str(cells_alive))
+            # If the user wants to move frames manually
+            if manual:
+                print("Press any key to move to next frame ...", end="")
+                input()
+
+            # Calculates the next generation
+            if VERBOSE:
+                print("Calculating next generation")
+            cells_to_be_killed, cells_to_be_revived, living_cells_before_next_generation = calculate_next_generation(grid)
+            if VERBOSE:
+                print("Creating next generation")
+            create_next_generation(grid, cells_to_be_killed, cells_to_be_revived)
+            if VERBOSE:
+                print("Next generation complete")
+            cells_alive = living_cells_before_next_generation + len(cells_to_be_revived) - len(cells_to_be_killed)
+            if VERBOSE or manual:
+                print("\tNumber of cells alive: " + str(cells_alive))
+
+        # If the pause signal is true
+        else:
+            # Set the pause button's text to "Continue"
+            pause_button.config(text="Continue")
 
         # Visualize the simulation
         if VERBOSE:
@@ -842,6 +865,19 @@ class Signal:
         self.state = new_state
 
         return old_state
+
+    def change_state(self):
+        """
+        Changes the signal state to the opposite of what it currently is
+        :return: self.state (bool)
+        """
+        if self.state:
+            self.set_state(False)
+
+        else:
+            self.set_state(True)
+
+        return self.state
 
 
 if __name__ == '__main__':
