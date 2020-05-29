@@ -60,14 +60,8 @@ def main():
     if manual:
         print("Press any key to start the game loop", end="")
         input()
-    while True:
-        # Create new simulation
-        grid = new_simulation(canvas_height, canvas_width, manual, auto_seed, min_auto_seed_percent,
-                              max_auto_seed_percent, drawn_cells, top, canvas)
-
-        # Simulate simulation
-        loop_signal.set_state(True)
-        simulation_loop(max_framerate, manual, drawn_cells, loop_signal, pause_signal, canvas, pause_button, grid)
+    game_loop(canvas_height, canvas_width, manual, auto_seed, min_auto_seed_percent, max_auto_seed_percent, drawn_cells,
+              top, canvas, max_framerate, loop_signal, pause_signal, pause_button)
 
 
 def print_intro():
@@ -209,6 +203,51 @@ def initialize(manual, auto_seed):
                                                                 auto_seed)
 
     return drawn_cells, loop_signal, pause_signal, top, canvas, button_new_sim, button_pause_sim
+
+
+def game_loop(canvas_height, canvas_width, manual, auto_seed, min_auto_seed_percent, max_auto_seed_percent, drawn_cells,
+              top, canvas, max_framerate, loop_signal, pause_signal, pause_button):
+    """
+    :param canvas_height: The desired height of the canvas in pixels
+    :type canvas_height: int
+    :param canvas_width: The desired height of the canvas in pixels
+    :type canvas_width: int
+    :param manual: Whether or not the user will be asked to press a key between program events
+    :type manual: bool
+    :param auto_seed: Whether or not to generate new seed or load from file
+    :type auto_seed: bool
+    :param min_auto_seed_percent: The minimum percentage of the grid which will be alive initially
+    :type min_auto_seed_percent: float
+    :param max_auto_seed_percent: The maximum percentage of the grid which will be alive initially
+    :type max_auto_seed_percent: float
+    :param drawn_cells: The dictionary of already rendered pixels
+    :type drawn_cells: dict
+    :param top: The instance of a tkinter main window that holds all other tkinter widgets
+    :type top: tkinter.Tk
+    :param canvas: The instance of a tkinter canvas that visualizes the game
+    :type canvas: tkinter.Canvas
+    :param max_framerate:
+    :param loop_signal:
+    :param pause_signal:
+    :param pause_button:
+    :param max_framerate: The maximum amount of times per second the program will run this loop
+    :type max_framerate: float
+    :param loop_signal: The signal which controls whether or not to break the loop
+    :type loop_signal: Signal
+    :param pause_signal: The signal which controls whether or not to pause the loop
+    :type pause_signal: Signal
+    :param pause_button: The button which changes the pause_signal
+    :type pause_button: tkinter.Button
+    :return: None
+    """
+    while True:
+        # Create new simulation
+        grid = new_simulation(canvas_height, canvas_width, manual, auto_seed, min_auto_seed_percent,
+                              max_auto_seed_percent, drawn_cells, top, canvas)
+
+        # Simulate simulation
+        loop_signal.set_state(True)
+        simulation_loop(max_framerate, manual, drawn_cells, loop_signal, pause_signal, canvas, pause_button, grid)
 
 
 def load_seed_from_file():
