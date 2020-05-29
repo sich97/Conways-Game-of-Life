@@ -11,24 +11,6 @@ Here is the description of the game from Wikipedia (https://en.wikipedia.org/wik
     It is a zero-player game, meaning that its evolution is determined by its initial state, requiring no further input.
     One interacts with the Game of Life by creating an initial configuration and observing how it evolves.
     It is Turing complete and can simulate a universal constructor or any other Turing machine.
-
-I currently have these next features planned:
-    Allow for generating new simulations even if the user started the program by loading seed from file
-
-    Move get_use_input functionality over to GUI
-
-    Ability to load saved seeds as new simulation from GUI
-
-    Zooming, panning and procedural generation
-        This would require a substantial rewrite of most, if not all, of the code
-
-    Better performance
-        As of now, the code is fairly inefficient, limiting the window size if one wants a smooth animation.
-
-        This ties nicely in with the previous planned feature.
-        Procedural generation and "chunk loading" might improve performance.
-
-        This also will require a substantial rewrite.
 """
 import tkinter
 from tkinter import filedialog
