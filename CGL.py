@@ -52,7 +52,7 @@ def main():
         input()
     if VERBOSE:
         print("Starting initialization")
-    drawn_cells, loop_signal, pause_signal, top, canvas, restart_button, pause_button = initialize(manual, auto_seed)
+    drawn_cells, pause_signal, top, canvas, restart_button, pause_button = initialize(manual, auto_seed)
     if VERBOSE:
         print("Initialization done")
 
@@ -61,7 +61,7 @@ def main():
         print("Press any key to start the game loop", end="")
         input()
     game_loop(canvas_height, canvas_width, manual, auto_seed, min_auto_seed_percent, max_auto_seed_percent, drawn_cells,
-              top, canvas, max_framerate, loop_signal, pause_signal, pause_button)
+              top, canvas, max_framerate, pause_signal, pause_button)
 
 
 def print_intro():
@@ -188,26 +188,26 @@ def initialize(manual, auto_seed):
     :type manual: bool
     :param auto_seed: Whether or not the program will generate seed automatically
     :type auto_seed: bool
-    :return: drawn_cells (dict), loop_signal (Signal), pause_signal (Signal), top (tkinter.Tk), canvas (tkinter.Canvas),
+    :return: drawn_cells (dict), pause_signal (Signal), top (tkinter.Tk), canvas (tkinter.Canvas),
     button_new_sim (tkinter.Button), button_pause_sim (tkinter.Button)
     """
     drawn_cells = {}
-    loop_signal = Signal("loop_signal", True)
     pause_signal = Signal("pause_signal", False)
 
     # Creates the graphical window
     if manual:
         print("Press any key to create canvas", end="")
         input()
-    top, canvas, button_new_sim, button_pause_sim = make_canvas("Conway's Game of Life", loop_signal, pause_signal,
+    top, canvas, button_new_sim, button_pause_sim = make_canvas("Conway's Game of Life", pause_signal,
                                                                 auto_seed)
 
-    return drawn_cells, loop_signal, pause_signal, top, canvas, button_new_sim, button_pause_sim
+    return drawn_cells, pause_signal, top, canvas, button_new_sim, button_pause_sim
 
 
 def game_loop(canvas_height, canvas_width, manual, auto_seed, min_auto_seed_percent, max_auto_seed_percent, drawn_cells,
-              top, canvas, max_framerate, loop_signal, pause_signal, pause_button):
+              top, canvas, max_framerate, pause_signal, pause_button):
     """
+    Creates and runs a simulation
     :param canvas_height: The desired height of the canvas in pixels
     :type canvas_height: int
     :param canvas_width: The desired height of the canvas in pixels
@@ -226,28 +226,20 @@ def game_loop(canvas_height, canvas_width, manual, auto_seed, min_auto_seed_perc
     :type top: tkinter.Tk
     :param canvas: The instance of a tkinter canvas that visualizes the game
     :type canvas: tkinter.Canvas
-    :param max_framerate:
-    :param loop_signal:
-    :param pause_signal:
-    :param pause_button:
     :param max_framerate: The maximum amount of times per second the program will run this loop
     :type max_framerate: float
-    :param loop_signal: The signal which controls whether or not to break the loop
-    :type loop_signal: Signal
     :param pause_signal: The signal which controls whether or not to pause the loop
     :type pause_signal: Signal
     :param pause_button: The button which changes the pause_signal
     :type pause_button: tkinter.Button
     :return: None
     """
-    while True:
-        # Create new simulation
-        grid = new_simulation(canvas_height, canvas_width, manual, auto_seed, min_auto_seed_percent,
-                              max_auto_seed_percent, drawn_cells, top, canvas)
+    # Create new simulation
+    grid = new_simulation(canvas_height, canvas_width, manual, auto_seed, min_auto_seed_percent, max_auto_seed_percent,
+                          drawn_cells, top, canvas)
 
-        # Simulate simulation
-        loop_signal.set_state(True)
-        simulation_loop(max_framerate, manual, drawn_cells, loop_signal, pause_signal, canvas, pause_button, grid)
+    # Run simulation
+    simulation_loop(max_framerate, manual, drawn_cells, pause_signal, canvas, pause_button, grid)
 
 
 def load_seed_from_file():
@@ -301,13 +293,11 @@ def load_seed_from_file():
     return current_seed, canvas_height, canvas_width
 
 
-def make_canvas(title, loop_signal, pause_signal, auto_seed):
+def make_canvas(title, pause_signal, auto_seed):
     """
     Uses tkinter to create a graphical user interface for visualizing the simulation and controlling the program.
     :param title: The window title
     :type title: string
-    :param loop_signal: The signal which controls whether or not to break the loop
-    :type loop_signal: Signal
     :param pause_signal: The signal which controls whether or not to pause the loop
     :type pause_signal: Signal
     :param auto_seed: Whether or not the user wants to generate a new simulation or load from file
@@ -332,7 +322,7 @@ def make_canvas(title, loop_signal, pause_signal, auto_seed):
         button_name = "Generate new"
     else:
         button_name = "Replay"
-    button_new_sim = tkinter.Button(top, text=button_name, command=lambda: loop_signal.set_state(False))
+    button_new_sim = tkinter.Button(top, text=button_name, command=lambda: print("Generate new sim"))
     button_new_sim.pack()
 
     # Button for pausing the simulation
@@ -548,7 +538,7 @@ def apply_seed(grid, seed):
         print("Seed applied")
 
 
-def simulation_loop(max_framerate, manual, drawn_cells, loop_signal, pause_signal, canvas, pause_button, grid):
+def simulation_loop(max_framerate, manual, drawn_cells, pause_signal, canvas, pause_button, grid):
     """
     Generates new generations, draws them on screen, then repeats.
     :param max_framerate: The maximum amount of times per second the program will run this loop
@@ -557,8 +547,6 @@ def simulation_loop(max_framerate, manual, drawn_cells, loop_signal, pause_signa
     :type manual: bool
     :param drawn_cells: The dictionary of already rendered pixels
     :type drawn_cells: dict
-    :param loop_signal: The signal which controls whether or not to break the loop
-    :type loop_signal: Signal
     :param pause_signal: The signal which controls whether or not to pause the loop
     :type pause_signal: Signal
     :param canvas: The instance of a tkinter canvas that visualizes the game
@@ -581,7 +569,7 @@ def simulation_loop(max_framerate, manual, drawn_cells, loop_signal, pause_signa
 
     # Game loop
     start = None
-    while loop_signal.get_state():
+    while True:
         # No need for timer if manual progression
         if not manual:
             start = timer()
@@ -599,7 +587,8 @@ def simulation_loop(max_framerate, manual, drawn_cells, loop_signal, pause_signa
             # Calculates the next generation
             if VERBOSE:
                 print("Calculating next generation")
-            cells_to_be_killed, cells_to_be_revived, living_cells_before_next_generation = calculate_next_generation(grid)
+            cells_to_be_killed, cells_to_be_revived,\
+                living_cells_before_next_generation = calculate_next_generation(grid)
             if VERBOSE:
                 print("Creating next generation")
             create_next_generation(grid, cells_to_be_killed, cells_to_be_revived)
