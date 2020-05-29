@@ -25,8 +25,8 @@ DEFAULT_MANUAL = False
 VERBOSE = False
 PRINT_INTRO = False
 GET_USER_INPUT = False
-DEFAULT_AUTO_SEED = True
-DEFAULT_CANVAS_HEIGHT = 50
+DEFAULT_AUTO_SEED = False
+DEFAULT_CANVAS_HEIGHT = 100
 DEFAULT_CANVAS_WIDTH_TO_HEIGHT_RATIO = 1
 DEFAULT_MAX_FRAMERATE = 60
 DEFAULT_MIN_AUTO_SEED_PERCENT = 5
@@ -35,7 +35,7 @@ DEFAULT_MAX_AUTO_SEED_PERCENT = 20
 
 def main():
     """
-    Initializes. Then repeatedly runs simulations after another.
+    Initializes. Then starts the game loop, from within another game loop can be called.
     :return: None
     """
     # Intro message
@@ -52,7 +52,11 @@ def main():
         input()
     if VERBOSE:
         print("Starting initialization")
-    drawn_cells, pause_signal, top, canvas, restart_button, pause_button = initialize(manual, auto_seed)
+    drawn_cells, pause_signal, top, canvas, restart_button, pause_button = initialize(manual, auto_seed, canvas_height,
+                                                                                      canvas_width,
+                                                                                      min_auto_seed_percent,
+                                                                                      max_auto_seed_percent,
+                                                                                      max_framerate)
     if VERBOSE:
         print("Initialization done")
 
@@ -181,13 +185,24 @@ def get_user_input():
     return canvas_height, canvas_width, max_framerate, manual, auto_seed, min_auto_seed_percent, max_auto_seed_percent
 
 
-def initialize(manual, auto_seed):
+def initialize(manual, auto_seed, canvas_height, canvas_width, min_auto_seed_percent, max_auto_seed_percent,
+               max_framerate):
     """
     Instantiates a couple of variables which will be used later
     :param manual: Whether or not the user will be asked to proceed
     :type manual: bool
     :param auto_seed: Whether or not the program will generate seed automatically
     :type auto_seed: bool
+    :param canvas_height: The desired height of the canvas in pixels
+    :type canvas_height: int
+    :param canvas_width: The desired height of the canvas in pixels
+    :type canvas_width: int
+    :param min_auto_seed_percent: The minimum percentage of the grid which will be alive initially
+    :type min_auto_seed_percent: float
+    :param max_auto_seed_percent: The maximum percentage of the grid which will be alive initially
+    :type max_auto_seed_percent: float
+    :param max_framerate: The maximum amount of times per second the program will run this loop
+    :type max_framerate: float
     :return: drawn_cells (dict), pause_signal (Signal), top (tkinter.Tk), canvas (tkinter.Canvas),
     button_new_sim (tkinter.Button), button_pause_sim (tkinter.Button)
     """
@@ -198,8 +213,10 @@ def initialize(manual, auto_seed):
     if manual:
         print("Press any key to create canvas", end="")
         input()
-    top, canvas, button_new_sim, button_pause_sim = make_canvas("Conway's Game of Life", pause_signal,
-                                                                auto_seed)
+    top, canvas, button_new_sim, button_pause_sim = make_canvas("Conway's Game of Life", pause_signal, auto_seed,
+                                                                canvas_height, canvas_width, manual,
+                                                                min_auto_seed_percent, max_auto_seed_percent,
+                                                                drawn_cells, max_framerate)
 
     return drawn_cells, pause_signal, top, canvas, button_new_sim, button_pause_sim
 
@@ -293,7 +310,8 @@ def load_seed_from_file():
     return current_seed, canvas_height, canvas_width
 
 
-def make_canvas(title, pause_signal, auto_seed):
+def make_canvas(title, pause_signal, auto_seed, canvas_height, canvas_width, manual, min_auto_seed_percent,
+                max_auto_seed_percent, drawn_cells, max_framerate):
     """
     Uses tkinter to create a graphical user interface for visualizing the simulation and controlling the program.
     :param title: The window title
@@ -302,6 +320,21 @@ def make_canvas(title, pause_signal, auto_seed):
     :type pause_signal: Signal
     :param auto_seed: Whether or not the user wants to generate a new simulation or load from file
     :type auto_seed: bool
+    :param canvas_height: The desired height of the canvas in pixels
+    :type canvas_height: int
+    :param canvas_width: The desired height of the canvas in pixels
+    :type canvas_width: int
+    :param manual: Whether or not the user will be asked to press a key between program events
+    :type manual: bool
+    :param min_auto_seed_percent: The minimum percentage of the grid which will be alive initially
+    :type min_auto_seed_percent: float
+    :param max_auto_seed_percent: The maximum percentage of the grid which will be alive initially
+    :type max_auto_seed_percent: float
+    :param drawn_cells: The dictionary of already rendered pixels
+    :type drawn_cells: dict
+    :param max_framerate: The maximum amount of times per second the program will run this loop
+    :type max_framerate: float
+
     :return: top (tkinter.Tk), canvas (tkinter.Canvas), button_new_sim (tkinter.Button),
     button_pause_sim (tkinter.Button)
     """
@@ -317,17 +350,22 @@ def make_canvas(title, pause_signal, auto_seed):
     canvas = tkinter.Canvas(top, width=36, height=36, bg="black")
     canvas.pack()
 
+    # Button for pausing the simulation
+    button_pause_sim = tkinter.Button(top, text="Pause", command=lambda: pause_signal.change_state())
+    button_pause_sim.pack()
+
     # Button for restarting new or existing simulation
     if auto_seed:
         button_name = "Generate new"
     else:
         button_name = "Replay"
-    button_new_sim = tkinter.Button(top, text=button_name, command=lambda: print("Generate new sim"))
+    button_new_sim = tkinter.Button(top, text=button_name, command=lambda: game_loop(canvas_height, canvas_width,
+                                                                                     manual, auto_seed,
+                                                                                     min_auto_seed_percent,
+                                                                                     max_auto_seed_percent, drawn_cells,
+                                                                                     top, canvas, max_framerate,
+                                                                                     pause_signal, button_pause_sim))
     button_new_sim.pack()
-
-    # Button for pausing the simulation
-    button_pause_sim = tkinter.Button(top, text="Pause", command=lambda: pause_signal.change_state())
-    button_pause_sim.pack()
 
     if VERBOSE:
         print("Canvas created")
