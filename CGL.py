@@ -26,7 +26,7 @@ VERBOSE = False
 PRINT_INTRO = False
 GET_USER_INPUT = False
 DEFAULT_MODE = "new"
-DEFAULT_CANVAS_HEIGHT = 100
+DEFAULT_CANVAS_HEIGHT = 200
 DEFAULT_CANVAS_WIDTH_TO_HEIGHT_RATIO = 1
 DEFAULT_MAX_FRAMERATE = 60
 DEFAULT_MIN_AUTO_SEED_PERCENT = 5
@@ -52,11 +52,8 @@ def main():
         input()
     if VERBOSE:
         print("Starting initialization")
-    drawn_cells, pause_signal, top, canvas, restart_button, pause_button = initialize(manual, canvas_height,
-                                                                                      canvas_width,
-                                                                                      min_auto_seed_percent,
-                                                                                      max_auto_seed_percent,
-                                                                                      max_framerate)
+    drawn_cells, pause_signal, top, canvas, restart_button, pause_button, current_seed =\
+        initialize(manual, canvas_height, canvas_width, min_auto_seed_percent, max_auto_seed_percent, max_framerate)
     if VERBOSE:
         print("Initialization done")
 
@@ -65,7 +62,7 @@ def main():
         print("Press any key to start the game loop", end="")
         input()
     game_loop(canvas_height, canvas_width, manual, min_auto_seed_percent, max_auto_seed_percent, drawn_cells,
-              top, canvas, max_framerate, pause_signal, pause_button, mode)
+              top, canvas, max_framerate, pause_signal, pause_button, mode, current_seed)
 
 
 def print_intro():
@@ -201,10 +198,11 @@ def initialize(manual, canvas_height, canvas_width, min_auto_seed_percent, max_a
     :param max_framerate: The maximum amount of times per second the program will run this loop
     :type max_framerate: float
     :return: drawn_cells (dict), pause_signal (Signal), top (tkinter.Tk), canvas (tkinter.Canvas),
-    button_new_sim (tkinter.Button), button_pause_sim (tkinter.Button)
+    button_new_sim (tkinter.Button), button_pause_sim (tkinter.Button), current_seed (list)
     """
     drawn_cells = {}
     pause_signal = Signal("pause_signal", False)
+    current_seed = []
 
     # Creates the graphical window
     if manual:
@@ -212,13 +210,14 @@ def initialize(manual, canvas_height, canvas_width, min_auto_seed_percent, max_a
         input()
     top, canvas, button_new_sim, button_pause_sim = make_canvas("Conway's Game of Life", pause_signal, canvas_height,
                                                                 canvas_width, manual, min_auto_seed_percent,
-                                                                max_auto_seed_percent, drawn_cells, max_framerate)
+                                                                max_auto_seed_percent, drawn_cells, max_framerate,
+                                                                current_seed)
 
-    return drawn_cells, pause_signal, top, canvas, button_new_sim, button_pause_sim
+    return drawn_cells, pause_signal, top, canvas, button_new_sim, button_pause_sim, current_seed
 
 
 def game_loop(canvas_height, canvas_width, manual, min_auto_seed_percent, max_auto_seed_percent, drawn_cells,
-              top, canvas, max_framerate, pause_signal, pause_button, mode):
+              top, canvas, max_framerate, pause_signal, pause_button, mode, current_seed):
     """
     Creates and runs a simulation
     :param canvas_height: The desired height of the canvas in pixels
@@ -245,19 +244,23 @@ def game_loop(canvas_height, canvas_width, manual, min_auto_seed_percent, max_au
     :type pause_button: tkinter.Button
     :param mode: Whether or not to create a new simulation, load existing one or simply replay the current one
     :type mode: str
+    :param current_seed: The seed that determines which cells start as alive or not
+    :type current_seed: list of lists
     :return: None
     """
     # Create new simulation
     grid = new_simulation(canvas_height, canvas_width, manual, min_auto_seed_percent, max_auto_seed_percent,
-                          drawn_cells, top, canvas, mode)
+                          drawn_cells, top, canvas, mode, current_seed)
 
     # Run simulation
     simulation_loop(max_framerate, manual, drawn_cells, pause_signal, canvas, pause_button, grid)
 
 
-def load_seed_from_file():
+def load_seed_from_file(current_seed):
     """
     Have the user choose a file to use as seed and then load it into memory.
+    :param current_seed: The seed that determines which cells start as alive or not
+    :type current_seed: list of lists
     :return: current_seed (list of lists), canvas_height (int), canvas_width (int)
     """
     # Create a new instance of tkinter
@@ -275,7 +278,7 @@ def load_seed_from_file():
     if VERBOSE:
         print("Parsing file")
 
-    current_seed = []
+    current_seed.clear()
     with open(root.filename, "r") as file:
         for line_number, line in enumerate(file):
             # Remove string characters
@@ -303,11 +306,11 @@ def load_seed_from_file():
     if VERBOSE:
         print("Parsing complete")
 
-    return current_seed, canvas_height, canvas_width
+    return canvas_height, canvas_width
 
 
 def make_canvas(title, pause_signal, canvas_height, canvas_width, manual, min_auto_seed_percent,
-                max_auto_seed_percent, drawn_cells, max_framerate):
+                max_auto_seed_percent, drawn_cells, max_framerate, current_seed):
     """
     Uses tkinter to create a graphical user interface for visualizing the simulation and controlling the program.
     :param title: The window title
@@ -328,7 +331,8 @@ def make_canvas(title, pause_signal, canvas_height, canvas_width, manual, min_au
     :type drawn_cells: dict
     :param max_framerate: The maximum amount of times per second the program will run this loop
     :type max_framerate: float
-
+    :param current_seed: The seed that determines which cells start as alive or note
+    :type current_seed: list of lists
     :return: top (tkinter.Tk), canvas (tkinter.Canvas), button_new_sim (tkinter.Button),
     button_pause_sim (tkinter.Button)
     """
@@ -348,20 +352,31 @@ def make_canvas(title, pause_signal, canvas_height, canvas_width, manual, min_au
     button_pause_sim = tkinter.Button(top, text="Pause", command=lambda: pause_signal.change_state())
     button_pause_sim.pack()
 
+    # Button for creating a new simulation
     button_new_sim = tkinter.Button(top, text="New", command=lambda: game_loop(canvas_height, canvas_width, manual,
                                                                                min_auto_seed_percent,
                                                                                max_auto_seed_percent, drawn_cells, top,
                                                                                canvas, max_framerate, pause_signal,
-                                                                               button_pause_sim, "new"))
+                                                                               button_pause_sim, "new", current_seed))
     button_new_sim.pack()
 
+    # Button for loading an existing simulation
     button_load_sim = tkinter.Button(top, text="Load", command=lambda: game_loop(canvas_height, canvas_width, manual,
                                                                                  min_auto_seed_percent,
                                                                                  max_auto_seed_percent, drawn_cells,
                                                                                  top, canvas, max_framerate,
                                                                                  pause_signal, button_pause_sim,
-                                                                                 "load"))
+                                                                                 "load", current_seed))
     button_load_sim.pack()
+
+    # Button for replaying the current simulation
+    button_replay_sim = tkinter.Button(top, text="Replay", command=lambda: game_loop(canvas_height, canvas_width,
+                                                                                     manual, min_auto_seed_percent,
+                                                                                     max_auto_seed_percent, drawn_cells,
+                                                                                     top, canvas, max_framerate,
+                                                                                     pause_signal, button_pause_sim,
+                                                                                     "replay", current_seed))
+    button_replay_sim.pack()
 
     if VERBOSE:
         print("Canvas created")
@@ -370,7 +385,7 @@ def make_canvas(title, pause_signal, canvas_height, canvas_width, manual, min_au
 
 
 def new_simulation(canvas_height, canvas_width, manual, min_auto_seed_percent, max_auto_seed_percent,
-                   drawn_cells, top, canvas, mode):
+                   drawn_cells, top, canvas, mode, current_seed):
     """
     Resets necessary variables and generates new values for next simulation.
     :param canvas_height: The desired height of the canvas in pixels
@@ -391,6 +406,8 @@ def new_simulation(canvas_height, canvas_width, manual, min_auto_seed_percent, m
     :type canvas: tkinter.Canvas
     :param mode: Whether or not to create a new simulation, load an existing one or simply replay the current one
     :type mode: str
+    :param current_seed: The seed that determines which cells start as alive or not
+    :type current_seed: list of lists
     :return: grid (list of lists)
     """
     # Reset
@@ -412,14 +429,14 @@ def new_simulation(canvas_height, canvas_width, manual, min_auto_seed_percent, m
         if manual:
             print("Press any key to generate seed")
             input()
-        current_seed = generate_seed(canvas_height, canvas_width, min_auto_seed_percent, max_auto_seed_percent)
+        generate_seed(canvas_height, canvas_width, min_auto_seed_percent, max_auto_seed_percent, current_seed)
 
     # If loading seed from file
-    else:
+    elif mode == "load":
         if manual:
             print("Press any key to load seed")
             input()
-        current_seed, canvas_height, canvas_width = load_seed_from_file()
+        canvas_height, canvas_width = load_seed_from_file(current_seed)
 
     # Resize canvas
     if manual:
@@ -454,7 +471,7 @@ def new_simulation(canvas_height, canvas_width, manual, min_auto_seed_percent, m
     return grid
 
 
-def generate_seed(canvas_height, canvas_width, min_auto_seed_percent, max_auto_seed_percent):
+def generate_seed(canvas_height, canvas_width, min_auto_seed_percent, max_auto_seed_percent, current_seed):
     """
     Generates a list of cells that will be alive initially.
     :param canvas_height: The height of the canvas in pixels
@@ -465,13 +482,15 @@ def generate_seed(canvas_height, canvas_width, min_auto_seed_percent, max_auto_s
     :type min_auto_seed_percent: float
     :param max_auto_seed_percent: The maximum percentage of the grid which will be alive initially
     :type max_auto_seed_percent: float
-    :return: current_seed (list of lists)
+    :param current_seed: The seed that determines which cells start as alive or not
+    :type current_seed: list of lists
+    :return: None
     """
     # Prepares variables
     if VERBOSE:
         print("Preparing variables")
 
-    current_seed = []
+    current_seed.clear()
     min_alive_cells = int((canvas_height * canvas_width) * min_auto_seed_percent)
     max_alive_cells = int((canvas_height * canvas_width) * max_auto_seed_percent)
     amount_of_cells_to_seed = random.randint(min_alive_cells, max_alive_cells)
