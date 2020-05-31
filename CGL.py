@@ -339,26 +339,21 @@ def make_canvas(title, pause_signal, manual, min_auto_seed_percent,
     button_pause_sim.pack()
 
     # Button for replaying the current simulation
-    button_replay_sim = tkinter.Button(top, text="Replay", command=lambda: game_loop(manual, min_auto_seed_percent,
-                                                                                     max_auto_seed_percent, drawn_cells,
-                                                                                     top, canvas, max_framerate,
-                                                                                     pause_signal, button_pause_sim,
-                                                                                     "replay", current_seed))
+    button_replay_sim = create_sim_mode_buttons(manual, min_auto_seed_percent, max_auto_seed_percent, drawn_cells, top,
+                                                canvas, max_framerate, pause_signal, button_pause_sim, "Replay",
+                                                current_seed)
     button_replay_sim.pack()
 
     # Button for creating a new simulation
-    button_new_sim = tkinter.Button(top, text="New", command=lambda: game_loop(manual, min_auto_seed_percent,
-                                                                               max_auto_seed_percent, drawn_cells, top,
-                                                                               canvas, max_framerate, pause_signal,
-                                                                               button_pause_sim, "new", current_seed))
+    button_new_sim = create_sim_mode_buttons(manual, min_auto_seed_percent, max_auto_seed_percent, drawn_cells, top,
+                                             canvas, max_framerate, pause_signal, button_pause_sim, "New",
+                                             current_seed)
     button_new_sim.pack()
 
     # Button for loading an existing simulation
-    button_load_sim = tkinter.Button(top, text="Load", command=lambda: game_loop(manual, min_auto_seed_percent,
-                                                                                 max_auto_seed_percent, drawn_cells,
-                                                                                 top, canvas, max_framerate,
-                                                                                 pause_signal, button_pause_sim,
-                                                                                 "load", current_seed))
+    button_load_sim = create_sim_mode_buttons(manual, min_auto_seed_percent, max_auto_seed_percent, drawn_cells, top,
+                                              canvas, max_framerate, pause_signal, button_pause_sim, "Load",
+                                              current_seed)
     button_load_sim.pack()
 
     canvas.update()
@@ -367,6 +362,46 @@ def make_canvas(title, pause_signal, manual, min_auto_seed_percent,
         print("Canvas created")
 
     return top, canvas, button_new_sim, button_pause_sim
+
+
+def create_sim_mode_buttons(manual, min_auto_seed_percent, max_auto_seed_percent, drawn_cells, top, canvas,
+                            max_framerate, pause_signal, button_pause_sim, mode, current_seed):
+    """
+    Creates a button that will call the game loop function with a mode determined by the 'mode' parameter
+    :param manual: Whether or not the user will be asked to press a key between program events
+    :type manual: bool
+    :param min_auto_seed_percent: The minimum percentage of the grid which will be alive initially
+    :type min_auto_seed_percent: float
+    :param max_auto_seed_percent: The maximum percentage of the grid which will be alive initially
+    :type max_auto_seed_percent: float
+    :param drawn_cells: The dictionary of already rendered pixels
+    :type drawn_cells: dict
+    :param top: The parent window
+    :type top: tkinter.Tk
+    :param canvas: The canvas where the cells will be drawn
+    :type canvas: tkinter.Canvas
+    :param max_framerate: The maximum amount of times per second the program will run this loop
+    :type max_framerate: float
+    :param pause_signal: The signal which controls whether or not to pause the loop
+    :type pause_signal: Signal
+    :param button_pause_sim: The button which controls the pause signal
+    :type button_pause_sim: tkinter.Button
+    :param mode: Which mode the new simulation will be (replay of the current one, create a new one
+    or load an existing one)
+    :type mode: str
+    :param current_seed: The seed that determines which cells start as alive or note
+    :type current_seed: list of lists
+    :return: vars()[button_name] (tkinter.Button)
+    """
+    mode_lowercase = mode.lower()
+    button_name = "button_" + mode_lowercase + "_sim"
+    vars()[button_name] = tkinter.Button(top, text=mode, command=lambda: game_loop(manual, min_auto_seed_percent,
+                                                                                   max_auto_seed_percent, drawn_cells,
+                                                                                   top, canvas, max_framerate,
+                                                                                   pause_signal, button_pause_sim,
+                                                                                   mode_lowercase, current_seed))
+
+    return vars()[button_name]
 
 
 def new_simulation(manual, min_auto_seed_percent, max_auto_seed_percent, drawn_cells, top, canvas, mode, current_seed):
