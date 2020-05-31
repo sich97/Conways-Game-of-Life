@@ -26,7 +26,7 @@ VERBOSE = False
 PRINT_INTRO = False
 GET_USER_INPUT = False
 DEFAULT_MODE = "new"
-DEFAULT_CANVAS_HEIGHT = 200
+DEFAULT_CANVAS_HEIGHT = 100
 DEFAULT_CANVAS_WIDTH_TO_HEIGHT_RATIO = 1
 DEFAULT_MAX_FRAMERATE = 60
 DEFAULT_MIN_AUTO_SEED_PERCENT = 5
@@ -351,6 +351,15 @@ def make_canvas(title, pause_signal, canvas_height, canvas_width, manual, min_au
     # Button for pausing the simulation
     button_pause_sim = tkinter.Button(top, text="Pause", command=lambda: pause_signal.change_state())
     button_pause_sim.pack()
+    
+    # Button for replaying the current simulation
+    button_replay_sim = tkinter.Button(top, text="Replay", command=lambda: game_loop(canvas_height, canvas_width,
+                                                                                     manual, min_auto_seed_percent,
+                                                                                     max_auto_seed_percent, drawn_cells,
+                                                                                     top, canvas, max_framerate,
+                                                                                     pause_signal, button_pause_sim,
+                                                                                     "replay", current_seed))
+    button_replay_sim.pack()
 
     # Button for creating a new simulation
     button_new_sim = tkinter.Button(top, text="New", command=lambda: game_loop(canvas_height, canvas_width, manual,
@@ -368,15 +377,6 @@ def make_canvas(title, pause_signal, canvas_height, canvas_width, manual, min_au
                                                                                  pause_signal, button_pause_sim,
                                                                                  "load", current_seed))
     button_load_sim.pack()
-
-    # Button for replaying the current simulation
-    button_replay_sim = tkinter.Button(top, text="Replay", command=lambda: game_loop(canvas_height, canvas_width,
-                                                                                     manual, min_auto_seed_percent,
-                                                                                     max_auto_seed_percent, drawn_cells,
-                                                                                     top, canvas, max_framerate,
-                                                                                     pause_signal, button_pause_sim,
-                                                                                     "replay", current_seed))
-    button_replay_sim.pack()
 
     if VERBOSE:
         print("Canvas created")
@@ -420,6 +420,10 @@ def new_simulation(canvas_height, canvas_width, manual, min_auto_seed_percent, m
     grid = []
     for rectangle_name in drawn_cells:
         canvas.delete(drawn_cells[rectangle_name])
+
+    if mode == "replay":
+        canvas_height = canvas.winfo_height() - 2
+        canvas_width = canvas.winfo_width() - 2
 
     if VERBOSE:
         print("Variables reset")
