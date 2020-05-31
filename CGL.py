@@ -27,7 +27,7 @@ PRINT_INTRO = False
 GET_USER_INPUT = False
 DEFAULT_MODE = "new"
 DEFAULT_CANVAS_HEIGHT = 100
-DEFAULT_CANVAS_WIDTH_TO_HEIGHT_RATIO = 1
+DEFAULT_CANVAS_WIDTH = DEFAULT_CANVAS_HEIGHT
 DEFAULT_MAX_FRAMERATE = 60
 DEFAULT_MIN_AUTO_SEED_PERCENT = 5
 DEFAULT_MAX_AUTO_SEED_PERCENT = 20
@@ -104,7 +104,7 @@ def get_user_input():
 
     # Sets values based on defaults
     canvas_height = DEFAULT_CANVAS_HEIGHT
-    canvas_width = int(canvas_height * DEFAULT_CANVAS_WIDTH_TO_HEIGHT_RATIO)
+    canvas_width = DEFAULT_CANVAS_WIDTH
     max_framerate = 1 / DEFAULT_MAX_FRAMERATE
     manual = DEFAULT_MANUAL
     mode = DEFAULT_MODE
@@ -141,9 +141,8 @@ def get_user_input():
             canvas_height = int(input() or DEFAULT_CANVAS_HEIGHT)
 
             # Canvas width
-            print("Please input window width to height ratio (2 makes width double the height)["
-                  + str(DEFAULT_CANVAS_WIDTH_TO_HEIGHT_RATIO) + "]: ", end="")
-            canvas_width = int(canvas_height * (float(input() or DEFAULT_CANVAS_WIDTH_TO_HEIGHT_RATIO)))
+            print("Please input window width[" + str(DEFAULT_CANVAS_WIDTH) + "]: ", end="")
+            canvas_width = int(input() or DEFAULT_CANVAS_WIDTH)
 
             # Minimum seed percent
             print("Please input the minimum percent of the cells you want to start as alive["
@@ -351,7 +350,7 @@ def make_canvas(title, pause_signal, canvas_height, canvas_width, manual, min_au
     # Button for pausing the simulation
     button_pause_sim = tkinter.Button(top, text="Pause", command=lambda: pause_signal.change_state())
     button_pause_sim.pack()
-    
+
     # Button for replaying the current simulation
     button_replay_sim = tkinter.Button(top, text="Replay", command=lambda: game_loop(canvas_height, canvas_width,
                                                                                      manual, min_auto_seed_percent,
