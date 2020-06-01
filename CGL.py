@@ -47,13 +47,15 @@ def main():
     if VERBOSE:
         print("Starting initialization")
     drawn_cells, pause_signal, top, canvas, restart_button, pause_button, current_seed, canvas_height_input,\
-        canvas_width_input = initialize(min_auto_seed_percent, max_auto_seed_percent, max_framerate)
+        canvas_width_input, next_frame_signal, next_frame_button = initialize(min_auto_seed_percent,
+                                                                              max_auto_seed_percent, max_framerate)
     if VERBOSE:
         print("Initialization done")
 
     # Game loop
     game_loop(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, canvas, max_framerate, pause_signal,
-              pause_button, mode, current_seed, canvas_height_input, canvas_width_input)
+              pause_button, mode, current_seed, canvas_height_input, canvas_width_input, next_frame_signal,
+              next_frame_button)
 
 
 def print_intro():
@@ -153,23 +155,27 @@ def initialize(min_auto_seed_percent, max_auto_seed_percent, max_framerate):
     :type max_framerate: float
     :return: drawn_cells (dict), pause_signal (Signal), top (tkinter.Tk), canvas (tkinter.Canvas),
     button_new_sim (tkinter.Button), button_pause_sim (tkinter.Button), current_seed (list),
-    canvas_height_input (tkinter.Entry), canvas_width_input (tkinter.Entry)
+    canvas_height_input (tkinter.Entry), canvas_width_input (tkinter.Entry), next_frame_signal (Signal),
+    next_frame_button (tkinter.Button)
     """
     drawn_cells = {}
     pause_signal = Signal("pause_signal", False)
+    next_frame_signal = Signal("next_frame_signal", False)
     current_seed = []
 
     # Creates the graphical window
     top, canvas, button_new_sim, button_pause_sim, canvas_height_input,\
-        canvas_width_input = create_gui("Conway's Game of Life", pause_signal, min_auto_seed_percent,
-                                        max_auto_seed_percent, drawn_cells, max_framerate, current_seed)
+        canvas_width_input, next_frame_button = create_gui("Conway's Game of Life", pause_signal, min_auto_seed_percent,
+                                                           max_auto_seed_percent, drawn_cells, max_framerate,
+                                                           current_seed, next_frame_signal)
 
     return drawn_cells, pause_signal, top, canvas, button_new_sim, button_pause_sim, current_seed,\
-        canvas_height_input, canvas_width_input
+        canvas_height_input, canvas_width_input, next_frame_signal, next_frame_button
 
 
 def game_loop(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, canvas, max_framerate, pause_signal,
-              pause_button, mode, current_seed, canvas_height_input, canvas_width_input):
+              pause_button, mode, current_seed, canvas_height_input, canvas_width_input, next_frame_signal,
+              next_frame_button):
     """
     Creates and runs a simulation
     :param min_auto_seed_percent: The minimum percentage of the grid which will be alive initially
@@ -194,6 +200,11 @@ def game_loop(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, canvas,
     :type canvas_height_input: tkinter.Entry
     :param canvas_width_input: The GUI input box for changing the canvas width
     :type canvas_width_input: tkinter.Entry
+    :param next_frame_signal: The signal which controls whether or not to move to the next frame
+    while the simulation is paused
+    :type next_frame_signal: Signal
+    :param next_frame_button: The button which changes the next_frame_signal
+    :type next_frame_button: tkinter.Button
     :return: None
     """
     # Create new simulation
@@ -201,7 +212,8 @@ def game_loop(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, canvas,
                              current_seed, canvas_height_input, canvas_width_input)
 
     # Run simulation
-    run_simulation(max_framerate, drawn_cells, pause_signal, canvas, pause_button, grid)
+    run_simulation(max_framerate, drawn_cells, pause_signal, canvas, pause_button, grid, next_frame_signal,
+                   next_frame_button)
 
 
 def load_seed_from_file(current_seed):
@@ -258,7 +270,7 @@ def load_seed_from_file(current_seed):
 
 
 def create_gui(title, pause_signal, min_auto_seed_percent, max_auto_seed_percent, drawn_cells, max_framerate,
-               current_seed):
+               current_seed, next_frame_signal):
     """
     Uses tkinter to create a graphical user interface for visualizing the simulation and controlling the program.
     :param title: The window title
@@ -275,6 +287,9 @@ def create_gui(title, pause_signal, min_auto_seed_percent, max_auto_seed_percent
     :type max_framerate: float
     :param current_seed: The seed that determines which cells start as alive or note
     :type current_seed: list of lists
+    :param next_frame_signal: The signal which controls whether or not to move to the next frame
+    while the simulation is paused
+    :type next_frame_signal: Signal
     :return: top (tkinter.Tk), canvas (tkinter.Canvas), button_new_sim (tkinter.Button),
     button_pause_sim (tkinter.Button), canvas_height_input (tkinter.Entry), canvas_width_input (tkinter.Entry)
     """
@@ -307,20 +322,26 @@ def create_gui(title, pause_signal, min_auto_seed_percent, max_auto_seed_percent
     # Button for pausing the simulation
     button_pause_sim = tkinter.Button(top, text="Pause", command=lambda: pause_signal.change_state())
 
+    # Button for manually moving to the next frame while the simulation is paused
+    next_frame_button = tkinter.Button(top, text="Next frame", command=lambda: next_frame_signal.change_state())
+
     # Button for replaying the current simulation
     button_replay_sim = create_sim_mode_buttons(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, top,
                                                 canvas, max_framerate, pause_signal, button_pause_sim, "Replay",
-                                                current_seed, canvas_height_input, canvas_width_input)
+                                                current_seed, canvas_height_input, canvas_width_input,
+                                                next_frame_signal, next_frame_button)
 
     # Button for creating a new simulation
     button_new_sim = create_sim_mode_buttons(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, top,
                                              canvas, max_framerate, pause_signal, button_pause_sim, "New",
-                                             current_seed, canvas_height_input, canvas_width_input)
+                                             current_seed, canvas_height_input, canvas_width_input, next_frame_signal,
+                                             next_frame_button)
 
     # Button for loading an existing simulation
     button_load_sim = create_sim_mode_buttons(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, top,
                                               canvas, max_framerate, pause_signal, button_pause_sim, "Load",
-                                              current_seed, canvas_height_input, canvas_width_input)
+                                              current_seed, canvas_height_input, canvas_width_input, next_frame_signal,
+                                              next_frame_button)
 
     # Arrange the widgets on screen
     canvas.grid(row=0, column=1)
@@ -340,12 +361,12 @@ def create_gui(title, pause_signal, min_auto_seed_percent, max_auto_seed_percent
     if VERBOSE:
         print("Canvas created")
 
-    return top, canvas, button_new_sim, button_pause_sim, canvas_height_input, canvas_width_input
+    return top, canvas, button_new_sim, button_pause_sim, canvas_height_input, canvas_width_input, next_frame_button
 
 
 def create_sim_mode_buttons(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, top, canvas,
                             max_framerate, pause_signal, button_pause_sim, mode, current_seed, canvas_height_input,
-                            canvas_width_input):
+                            canvas_width_input, next_frame_signal, next_frame_button):
     """
     Creates a button that will call the game loop function with a mode determined by the 'mode' parameter
     :param min_auto_seed_percent: The minimum percentage of the grid which will be alive initially
@@ -373,6 +394,11 @@ def create_sim_mode_buttons(min_auto_seed_percent, max_auto_seed_percent, drawn_
     :type canvas_height_input: tkinter.Entry
     :param canvas_width_input: The GUI input box for changing the canvas width
     :type canvas_width_input: tkinter.Entry
+    :param next_frame_signal: The signal which controls whether or not to move to the next frame
+    while the simulation is paused
+    :type next_frame_signal: Signal
+    :param next_frame_button: The button which changes the next_frame_signal
+    :type next_frame_button: tkinter.Button
     :return: vars()[button_name] (tkinter.Button)
     """
     mode_lowercase = mode.lower()
@@ -382,7 +408,9 @@ def create_sim_mode_buttons(min_auto_seed_percent, max_auto_seed_percent, drawn_
                                                                                    canvas, max_framerate, pause_signal,
                                                                                    button_pause_sim, mode_lowercase,
                                                                                    current_seed, canvas_height_input,
-                                                                                   canvas_width_input))
+                                                                                   canvas_width_input,
+                                                                                   next_frame_signal,
+                                                                                   next_frame_button))
 
     return vars()[button_name]
 
@@ -640,7 +668,8 @@ def apply_seed(grid, seed):
         print("Seed applied")
 
 
-def run_simulation(max_framerate, drawn_cells, pause_signal, canvas, pause_button, grid):
+def run_simulation(max_framerate, drawn_cells, pause_signal, canvas, pause_button, grid, next_frame_signal,
+                   next_frame_button):
     """
     Generates new generations, draws them on screen, then repeats.
     :param max_framerate: The maximum amount of times per second the program will run this loop
@@ -655,36 +684,59 @@ def run_simulation(max_framerate, drawn_cells, pause_signal, canvas, pause_butto
     :type pause_button: tkinter.Button
     :param grid: The 2D list of cells
     :type grid: list of lists
+    :param next_frame_signal: The signal which controls whether or not to move to the next frame
+    while the simulation is paused
+    :type next_frame_signal: Signal
+    :param next_frame_button: The button which changes the next_frame_signal
+    :type next_frame_button: tkinter.Button
     :return: None
     """
+
+    # Draws the first frame
+    if VERBOSE:
+        print("Drawing first frame")
+
+    draw_canvas(canvas, grid, drawn_cells)
+    canvas.update()
+
+    if VERBOSE:
+        print("First frame drawn")
+
     while True:
         # Start measuring time
         start = timer()
 
+        # Reset
+        pause_button.config(text="Pause")
+        next_frame_button.grid_remove()
+        next_frame_signal.set_state(False)
+
+        # If the pause button has been pressed
         if pause_signal.get_state():
-            # Set the pause button's text to "Continue"
+            # Set the pause button's text to "Resume"
             pause_button.config(text="Resume")
 
-            # INSERT CODE FOR MOVING FRAME USING GUI#
+            # Show the next_frame_button
+            next_frame_button.grid(row=0, column=2)
 
-        # Only calculate and create new generations if the pause signal is not true
-        else:
-            # Set the pause button's text to "Pause"
-            pause_button.config(text="Pause")
+            # Wait for pause_signal to be false, or next_frame_signal to be true
+            while pause_signal.get_state() and not next_frame_signal.get_state():
+                canvas.update()
+                time.sleep(0.01)
 
-            # Calculates the next generation
-            if VERBOSE:
-                print("Calculating next generation")
-            cells_to_be_killed, cells_to_be_revived,\
-                living_cells_before_next_generation = calculate_next_generation(grid)
-            if VERBOSE:
-                print("Creating next generation")
-            create_next_generation(grid, cells_to_be_killed, cells_to_be_revived)
-            if VERBOSE:
-                print("Next generation complete")
-            cells_alive = living_cells_before_next_generation + len(cells_to_be_revived) - len(cells_to_be_killed)
-            if VERBOSE:
-                print("\tNumber of cells alive: " + str(cells_alive))
+        # Calculates the next generation
+        if VERBOSE:
+            print("Calculating next generation")
+        cells_to_be_killed, cells_to_be_revived,\
+            living_cells_before_next_generation = calculate_next_generation(grid)
+        if VERBOSE:
+            print("Creating next generation")
+        create_next_generation(grid, cells_to_be_killed, cells_to_be_revived)
+        if VERBOSE:
+            print("Next generation complete")
+        cells_alive = living_cells_before_next_generation + len(cells_to_be_revived) - len(cells_to_be_killed)
+        if VERBOSE:
+            print("\tNumber of cells alive: " + str(cells_alive))
 
         # Visualize the simulation
         if VERBOSE:
