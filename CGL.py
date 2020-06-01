@@ -23,7 +23,6 @@ import pathlib
 VERBOSE = False
 PRINT_INTRO = False
 GET_USER_INPUT = False
-DEFAULT_MODE = "new"
 DEFAULT_CANVAS_HEIGHT = 100
 DEFAULT_CANVAS_WIDTH = DEFAULT_CANVAS_HEIGHT
 DEFAULT_MAX_FRAMERATE = 60
@@ -40,21 +39,18 @@ def main():
     if PRINT_INTRO:
         print_intro()
 
-    # User preferences
-    max_framerate, min_auto_seed_percent, max_auto_seed_percent, mode = get_user_input()
-
     # Initialization
     if VERBOSE:
         print("Starting initialization")
     drawn_cells, pause_signal, top, canvas, restart_button, pause_button, current_seed, canvas_height_input,\
-        canvas_width_input, next_frame_signal, next_frame_button = initialize(min_auto_seed_percent,
-                                                                              max_auto_seed_percent, max_framerate)
+        canvas_width_input, next_frame_signal, next_frame_button, max_framerate, min_auto_seed_percent,\
+        max_auto_seed_percent = initialize()
     if VERBOSE:
         print("Initialization done")
 
     # Game loop
     game_loop(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, canvas, max_framerate, pause_signal,
-              pause_button, mode, current_seed, canvas_height_input, canvas_width_input, next_frame_signal,
+              pause_button, "new", current_seed, canvas_height_input, canvas_width_input, next_frame_signal,
               next_frame_button)
 
 
@@ -88,80 +84,22 @@ def print_intro():
     print("To disable this intro message, change the global variable PRINT_INTRO to False")
 
 
-def get_user_input():
-    """
-    Asks the user for input in order to set preferences.
-    :return: max_framerate (float), mode (str), min_auto_seed_percent (float), max_auto_seed_percent (float)
-    """
-
-    # Sets values based on defaults
-    max_framerate = 1 / DEFAULT_MAX_FRAMERATE
-    mode = DEFAULT_MODE
-    min_auto_seed_percent = DEFAULT_MIN_AUTO_SEED_PERCENT / 100
-    max_auto_seed_percent = DEFAULT_MAX_AUTO_SEED_PERCENT / 100
-
-    # Asks the user for input
-    if GET_USER_INPUT:
-        print("Let's set some preferences."
-              "\nTo disable asking for preferences, change the global variable GET_USER_INPUT to False")
-
-        # Whether or not the user wants to create a new simulation or not
-        print("Do you want to generate a new simulation or load an existing one? 1 to create new, 0 to load existing[",
-              end="")
-        if DEFAULT_MODE == "new":
-            print("1]: ", end="")
-            temp_input = int(input() or 1)
-            if temp_input == 0:
-                mode = "load"
-            else:
-                mode = "new"
-        else:
-            print("0]: ", end="")
-            temp_input = int(input() or 0)
-            if temp_input == 1:
-                mode = "new"
-            else:
-                mode = "load"
-
-        # If the user wants automatic seeding, ask the user for percentages for seeding
-        if mode == "new":
-            # Minimum seed percent
-            print("Please input the minimum percent of the cells you want to start as alive["
-                  + str(DEFAULT_MIN_AUTO_SEED_PERCENT) + "]: ", end="")
-            temp_input = int(input() or DEFAULT_MIN_AUTO_SEED_PERCENT)
-            min_auto_seed_percent = temp_input / 100
-
-            # Maximum seed percent
-            print("Please input the maximum percent of the cells you want to start as alive["
-                  + str(DEFAULT_MAX_AUTO_SEED_PERCENT) + "]: ", end="")
-            temp_input = int(input() or DEFAULT_MAX_AUTO_SEED_PERCENT)
-            max_auto_seed_percent = temp_input / 100
-
-        # Asks for max framerate if the used didn't choose manual progression
-        print("Please input max framerate[" + str(DEFAULT_MAX_FRAMERATE) + "]: ", end="")
-        max_framerate = 1 / int(input() or DEFAULT_MAX_FRAMERATE)
-
-    return max_framerate, min_auto_seed_percent, max_auto_seed_percent, mode
-
-
-def initialize(min_auto_seed_percent, max_auto_seed_percent, max_framerate):
+def initialize():
     """
     Instantiates a couple of variables which will be used later
-    :param min_auto_seed_percent: The minimum percentage of the grid which will be alive initially
-    :type min_auto_seed_percent: float
-    :param max_auto_seed_percent: The maximum percentage of the grid which will be alive initially
-    :type max_auto_seed_percent: float
-    :param max_framerate: The maximum amount of times per second the program will run this loop
-    :type max_framerate: float
     :return: drawn_cells (dict), pause_signal (Signal), top (tkinter.Tk), canvas (tkinter.Canvas),
     button_new_sim (tkinter.Button), button_pause_sim (tkinter.Button), current_seed (list),
     canvas_height_input (tkinter.Entry), canvas_width_input (tkinter.Entry), next_frame_signal (Signal),
-    next_frame_button (tkinter.Button)
+    next_frame_button (tkinter.Button), max_framerate (float), min_auto_seed_percent (float),
+    max_auto_seed_percent (float)
     """
     drawn_cells = {}
     pause_signal = Signal("pause_signal", False)
     next_frame_signal = Signal("next_frame_signal", False)
     current_seed = []
+    max_framerate = 1 / DEFAULT_MAX_FRAMERATE
+    min_auto_seed_percent = DEFAULT_MIN_AUTO_SEED_PERCENT / 100
+    max_auto_seed_percent = DEFAULT_MAX_AUTO_SEED_PERCENT / 100
 
     # Creates the graphical window
     top, canvas, button_new_sim, button_pause_sim, canvas_height_input,\
@@ -170,7 +108,8 @@ def initialize(min_auto_seed_percent, max_auto_seed_percent, max_framerate):
                                                            current_seed, next_frame_signal)
 
     return drawn_cells, pause_signal, top, canvas, button_new_sim, button_pause_sim, current_seed,\
-        canvas_height_input, canvas_width_input, next_frame_signal, next_frame_button
+        canvas_height_input, canvas_width_input, next_frame_signal, next_frame_button, max_framerate,\
+        min_auto_seed_percent, max_auto_seed_percent
 
 
 def game_loop(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, canvas, max_framerate, pause_signal,
