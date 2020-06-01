@@ -20,8 +20,6 @@ from timeit import default_timer as timer
 from datetime import datetime
 import pathlib
 
-
-DEFAULT_MANUAL = False
 VERBOSE = False
 PRINT_INTRO = False
 GET_USER_INPUT = False
@@ -43,24 +41,18 @@ def main():
         print_intro()
 
     # User preferences
-    max_framerate, manual, min_auto_seed_percent, max_auto_seed_percent, mode = get_user_input()
+    max_framerate, min_auto_seed_percent, max_auto_seed_percent, mode = get_user_input()
 
     # Initialization
-    if manual:
-        print("Press any key to start initialization", end="")
-        input()
     if VERBOSE:
         print("Starting initialization")
     drawn_cells, pause_signal, top, canvas, restart_button, pause_button, current_seed, canvas_height_input,\
-        canvas_width_input = initialize(manual, min_auto_seed_percent, max_auto_seed_percent, max_framerate)
+        canvas_width_input = initialize(min_auto_seed_percent, max_auto_seed_percent, max_framerate)
     if VERBOSE:
         print("Initialization done")
 
     # Game loop
-    if manual:
-        print("Press any key to start the game loop", end="")
-        input()
-    game_loop(manual, min_auto_seed_percent, max_auto_seed_percent, drawn_cells, canvas, max_framerate, pause_signal,
+    game_loop(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, canvas, max_framerate, pause_signal,
               pause_button, mode, current_seed, canvas_height_input, canvas_width_input)
 
 
@@ -97,13 +89,11 @@ def print_intro():
 def get_user_input():
     """
     Asks the user for input in order to set preferences.
-    :return: max_framerate (float), manual (bool), mode (str), min_auto_seed_percent (float),
-    max_auto_seed_percent (float)
+    :return: max_framerate (float), mode (str), min_auto_seed_percent (float), max_auto_seed_percent (float)
     """
 
     # Sets values based on defaults
     max_framerate = 1 / DEFAULT_MAX_FRAMERATE
-    manual = DEFAULT_MANUAL
     mode = DEFAULT_MODE
     min_auto_seed_percent = DEFAULT_MIN_AUTO_SEED_PERCENT / 100
     max_auto_seed_percent = DEFAULT_MAX_AUTO_SEED_PERCENT / 100
@@ -145,36 +135,16 @@ def get_user_input():
             temp_input = int(input() or DEFAULT_MAX_AUTO_SEED_PERCENT)
             max_auto_seed_percent = temp_input / 100
 
-        # Whether or not the user wants to manually progress through the program and between frames
-        print("Do you want manual progression? 1 for yes, 0 for no [", end="")
-        if DEFAULT_MANUAL:
-            print("1]: ", end="")
-            temp_input = int(input() or 1)
-            if temp_input == 0:
-                manual = False
-            else:
-                manual = True
-        else:
-            print("0]: ", end="")
-            temp_input = int(input() or 0)
-            if temp_input == 1:
-                manual = True
-            else:
-                manual = False
-
         # Asks for max framerate if the used didn't choose manual progression
-        if not manual:
-            print("Please input max framerate[" + str(DEFAULT_MAX_FRAMERATE) + "]: ", end="")
-            max_framerate = 1 / int(input() or DEFAULT_MAX_FRAMERATE)
+        print("Please input max framerate[" + str(DEFAULT_MAX_FRAMERATE) + "]: ", end="")
+        max_framerate = 1 / int(input() or DEFAULT_MAX_FRAMERATE)
 
-    return max_framerate, manual, min_auto_seed_percent, max_auto_seed_percent, mode
+    return max_framerate, min_auto_seed_percent, max_auto_seed_percent, mode
 
 
-def initialize(manual, min_auto_seed_percent, max_auto_seed_percent, max_framerate):
+def initialize(min_auto_seed_percent, max_auto_seed_percent, max_framerate):
     """
     Instantiates a couple of variables which will be used later
-    :param manual: Whether or not the user will be asked to proceed
-    :type manual: bool
     :param min_auto_seed_percent: The minimum percentage of the grid which will be alive initially
     :type min_auto_seed_percent: float
     :param max_auto_seed_percent: The maximum percentage of the grid which will be alive initially
@@ -190,23 +160,18 @@ def initialize(manual, min_auto_seed_percent, max_auto_seed_percent, max_framera
     current_seed = []
 
     # Creates the graphical window
-    if manual:
-        print("Press any key to create canvas", end="")
-        input()
     top, canvas, button_new_sim, button_pause_sim, canvas_height_input,\
-        canvas_width_input = create_gui("Conway's Game of Life", pause_signal, manual, min_auto_seed_percent,
+        canvas_width_input = create_gui("Conway's Game of Life", pause_signal, min_auto_seed_percent,
                                         max_auto_seed_percent, drawn_cells, max_framerate, current_seed)
 
     return drawn_cells, pause_signal, top, canvas, button_new_sim, button_pause_sim, current_seed,\
         canvas_height_input, canvas_width_input
 
 
-def game_loop(manual, min_auto_seed_percent, max_auto_seed_percent, drawn_cells, canvas, max_framerate, pause_signal,
+def game_loop(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, canvas, max_framerate, pause_signal,
               pause_button, mode, current_seed, canvas_height_input, canvas_width_input):
     """
     Creates and runs a simulation
-    :param manual: Whether or not the user will be asked to press a key between program events
-    :type manual: bool
     :param min_auto_seed_percent: The minimum percentage of the grid which will be alive initially
     :type min_auto_seed_percent: float
     :param max_auto_seed_percent: The maximum percentage of the grid which will be alive initially
@@ -232,11 +197,11 @@ def game_loop(manual, min_auto_seed_percent, max_auto_seed_percent, drawn_cells,
     :return: None
     """
     # Create new simulation
-    grid = create_simulation(manual, min_auto_seed_percent, max_auto_seed_percent, drawn_cells, canvas, mode,
+    grid = create_simulation(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, canvas, mode,
                              current_seed, canvas_height_input, canvas_width_input)
 
     # Run simulation
-    run_simulation(max_framerate, manual, drawn_cells, pause_signal, canvas, pause_button, grid)
+    run_simulation(max_framerate, drawn_cells, pause_signal, canvas, pause_button, grid)
 
 
 def load_seed_from_file(current_seed):
@@ -292,7 +257,7 @@ def load_seed_from_file(current_seed):
     return canvas_height, canvas_width
 
 
-def create_gui(title, pause_signal, manual, min_auto_seed_percent, max_auto_seed_percent, drawn_cells, max_framerate,
+def create_gui(title, pause_signal, min_auto_seed_percent, max_auto_seed_percent, drawn_cells, max_framerate,
                current_seed):
     """
     Uses tkinter to create a graphical user interface for visualizing the simulation and controlling the program.
@@ -300,8 +265,6 @@ def create_gui(title, pause_signal, manual, min_auto_seed_percent, max_auto_seed
     :type title: string
     :param pause_signal: The signal which controls whether or not to pause the loop
     :type pause_signal: Signal
-    :param manual: Whether or not the user will be asked to press a key between program events
-    :type manual: bool
     :param min_auto_seed_percent: The minimum percentage of the grid which will be alive initially
     :type min_auto_seed_percent: float
     :param max_auto_seed_percent: The maximum percentage of the grid which will be alive initially
@@ -345,17 +308,17 @@ def create_gui(title, pause_signal, manual, min_auto_seed_percent, max_auto_seed
     button_pause_sim = tkinter.Button(top, text="Pause", command=lambda: pause_signal.change_state())
 
     # Button for replaying the current simulation
-    button_replay_sim = create_sim_mode_buttons(manual, min_auto_seed_percent, max_auto_seed_percent, drawn_cells, top,
+    button_replay_sim = create_sim_mode_buttons(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, top,
                                                 canvas, max_framerate, pause_signal, button_pause_sim, "Replay",
                                                 current_seed, canvas_height_input, canvas_width_input)
 
     # Button for creating a new simulation
-    button_new_sim = create_sim_mode_buttons(manual, min_auto_seed_percent, max_auto_seed_percent, drawn_cells, top,
+    button_new_sim = create_sim_mode_buttons(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, top,
                                              canvas, max_framerate, pause_signal, button_pause_sim, "New",
                                              current_seed, canvas_height_input, canvas_width_input)
 
     # Button for loading an existing simulation
-    button_load_sim = create_sim_mode_buttons(manual, min_auto_seed_percent, max_auto_seed_percent, drawn_cells, top,
+    button_load_sim = create_sim_mode_buttons(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, top,
                                               canvas, max_framerate, pause_signal, button_pause_sim, "Load",
                                               current_seed, canvas_height_input, canvas_width_input)
 
@@ -380,13 +343,11 @@ def create_gui(title, pause_signal, manual, min_auto_seed_percent, max_auto_seed
     return top, canvas, button_new_sim, button_pause_sim, canvas_height_input, canvas_width_input
 
 
-def create_sim_mode_buttons(manual, min_auto_seed_percent, max_auto_seed_percent, drawn_cells, top, canvas,
+def create_sim_mode_buttons(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, top, canvas,
                             max_framerate, pause_signal, button_pause_sim, mode, current_seed, canvas_height_input,
                             canvas_width_input):
     """
     Creates a button that will call the game loop function with a mode determined by the 'mode' parameter
-    :param manual: Whether or not the user will be asked to press a key between program events
-    :type manual: bool
     :param min_auto_seed_percent: The minimum percentage of the grid which will be alive initially
     :type min_auto_seed_percent: float
     :param max_auto_seed_percent: The maximum percentage of the grid which will be alive initially
@@ -416,7 +377,7 @@ def create_sim_mode_buttons(manual, min_auto_seed_percent, max_auto_seed_percent
     """
     mode_lowercase = mode.lower()
     button_name = "button_" + mode_lowercase + "_sim"
-    vars()[button_name] = tkinter.Button(top, text=mode, command=lambda: game_loop(manual, min_auto_seed_percent,
+    vars()[button_name] = tkinter.Button(top, text=mode, command=lambda: game_loop(min_auto_seed_percent,
                                                                                    max_auto_seed_percent, drawn_cells,
                                                                                    canvas, max_framerate, pause_signal,
                                                                                    button_pause_sim, mode_lowercase,
@@ -483,12 +444,10 @@ def change_canvas_size(direction, canvas, entry_box):
             canvas.config(width=int_value)
 
 
-def create_simulation(manual, min_auto_seed_percent, max_auto_seed_percent, drawn_cells, canvas, mode, current_seed,
+def create_simulation(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, canvas, mode, current_seed,
                       canvas_height_input, canvas_width_input):
     """
     Resets necessary variables and generates new values for next simulation.
-    :param manual: Whether or not the user will be asked to press a key between program events
-    :type manual: bool
     :param min_auto_seed_percent: The minimum percentage of the grid which will be alive initially
     :type min_auto_seed_percent: float
     :param max_auto_seed_percent: The maximum percentage of the grid which will be alive initially
@@ -508,9 +467,6 @@ def create_simulation(manual, min_auto_seed_percent, max_auto_seed_percent, draw
     :return: grid (list of lists)
     """
     # Reset
-    if manual:
-        print("Press any key to reset variables")
-        input()
     if VERBOSE:
         print("Resetting variables")
 
@@ -529,16 +485,10 @@ def create_simulation(manual, min_auto_seed_percent, max_auto_seed_percent, draw
 
     # If generating new seed
     if mode == "new":
-        if manual:
-            print("Press any key to generate seed")
-            input()
         generate_seed(canvas_height, canvas_width, min_auto_seed_percent, max_auto_seed_percent, current_seed)
 
     # If loading seed from file
     elif mode == "load":
-        if manual:
-            print("Press any key to load seed")
-            input()
         canvas_height, canvas_width = load_seed_from_file(current_seed)
 
         # Set the entry boxes for changing canvas sizes to the newly loaded sizes
@@ -548,9 +498,6 @@ def create_simulation(manual, min_auto_seed_percent, max_auto_seed_percent, draw
         canvas_width_input.insert(0, canvas_width)
 
     # Resize canvas
-    if manual:
-        print("Press any key to resize canvas")
-        input()
     if VERBOSE:
         print("Resizing canvas")
 
@@ -560,9 +507,6 @@ def create_simulation(manual, min_auto_seed_percent, max_auto_seed_percent, draw
         print("Canvas resized")
 
     # Creates the list of cells
-    if manual:
-        print("Press any key to create list of cells", end="")
-        input()
     if VERBOSE:
         print("Creating list of cells")
     for i in range(canvas_height):
@@ -571,9 +515,6 @@ def create_simulation(manual, min_auto_seed_percent, max_auto_seed_percent, draw
         print("List of cells created")
 
     # Seed
-    if manual:
-        print("Press any key to apply seed")
-        input()
     apply_seed(grid, current_seed)
 
     return grid
@@ -699,13 +640,11 @@ def apply_seed(grid, seed):
         print("Seed applied")
 
 
-def run_simulation(max_framerate, manual, drawn_cells, pause_signal, canvas, pause_button, grid):
+def run_simulation(max_framerate, drawn_cells, pause_signal, canvas, pause_button, grid):
     """
     Generates new generations, draws them on screen, then repeats.
     :param max_framerate: The maximum amount of times per second the program will run this loop
     :type max_framerate: float
-    :param manual: Whether or not the user will be asked to press a key between program events
-    :type manual: bool
     :param drawn_cells: The dictionary of already rendered pixels
     :type drawn_cells: dict
     :param pause_signal: The signal which controls whether or not to pause the loop
@@ -718,32 +657,20 @@ def run_simulation(max_framerate, manual, drawn_cells, pause_signal, canvas, pau
     :type grid: list of lists
     :return: None
     """
-    # Draws the first frame
-    if VERBOSE:
-        print("Drawing first frame")
-
-    draw_canvas(canvas, grid, drawn_cells)
-    canvas.update()
-
-    if VERBOSE:
-        print("First frame drawn")
-
-    # Game loop
-    start = None
     while True:
-        # No need for timer if manual progression
-        if not manual:
-            start = timer()
+        # Start measuring time
+        start = timer()
+
+        if pause_signal.get_state():
+            # Set the pause button's text to "Continue"
+            pause_button.config(text="Resume")
+
+            # INSERT CODE FOR MOVING FRAME USING GUI#
 
         # Only calculate and create new generations if the pause signal is not true
-        if not pause_signal.get_state():
+        else:
             # Set the pause button's text to "Pause"
             pause_button.config(text="Pause")
-
-            # If the user wants to move frames manually
-            if manual:
-                print("Press any key to move to next frame ...", end="")
-                input()
 
             # Calculates the next generation
             if VERBOSE:
@@ -756,13 +683,8 @@ def run_simulation(max_framerate, manual, drawn_cells, pause_signal, canvas, pau
             if VERBOSE:
                 print("Next generation complete")
             cells_alive = living_cells_before_next_generation + len(cells_to_be_revived) - len(cells_to_be_killed)
-            if VERBOSE or manual:
+            if VERBOSE:
                 print("\tNumber of cells alive: " + str(cells_alive))
-
-        # If the pause signal is true
-        else:
-            # Set the pause button's text to "Continue"
-            pause_button.config(text="Continue")
 
         # Visualize the simulation
         if VERBOSE:
@@ -775,16 +697,15 @@ def run_simulation(max_framerate, manual, drawn_cells, pause_signal, canvas, pau
             print("Visual representation updated")
 
         # Limits automatic loop to max_framerate
-        if not manual:
-            end = timer()
-            loop_time = end - start
-            if not loop_time > max_framerate:
-                time_to_sleep = max_framerate - loop_time
+        end = timer()
+        loop_time = end - start
+        if not loop_time > max_framerate:
+            time_to_sleep = max_framerate - loop_time
 
-                if VERBOSE:
-                    print("Waiting " + str(time_to_sleep) + " seconds")
+            if VERBOSE:
+                print("Waiting " + str(time_to_sleep) + " seconds")
 
-                time.sleep(time_to_sleep)
+            time.sleep(time_to_sleep)
 
 
 def draw_canvas(canvas, grid, drawn_cells):
