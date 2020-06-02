@@ -365,7 +365,7 @@ def apply_settings(canvas, canvas_height_input, canvas_width_input, min_seed_per
     new_height = canvas_height_input.get()
     new_width = canvas_width_input.get()
 
-    if new_height is not "":
+    if new_height != "":
         try:
             new_height = int(new_height)
             canvas_height_input_status.config(text="OK")
@@ -378,7 +378,7 @@ def apply_settings(canvas, canvas_height_input, canvas_width_input, min_seed_per
     else:
         canvas_height_input_status.config(text="ERROR: No input!")
 
-    if new_width is not "":
+    if new_width != "":
         try:
             new_width = int(new_width)
             canvas_width_input_status.config(text="OK")
@@ -395,7 +395,7 @@ def apply_settings(canvas, canvas_height_input, canvas_width_input, min_seed_per
     new_min_seed_percent = min_seed_percent_input.get()
     new_max_seed_percent = max_seed_percent_input.get()
 
-    if new_min_seed_percent is not "":
+    if new_min_seed_percent != "":
         try:
             new_min_seed_percent = int(new_min_seed_percent)
             min_seed_percent_input_status.config(text="OK")
@@ -408,7 +408,7 @@ def apply_settings(canvas, canvas_height_input, canvas_width_input, min_seed_per
     else:
         min_seed_percent_input_status.config(text="ERROR: No input!")
 
-    if new_max_seed_percent is not "":
+    if new_max_seed_percent != "":
         try:
             new_max_seed_percent = int(new_max_seed_percent)
             max_seed_percent_input_status.config(text="OK")
@@ -623,9 +623,7 @@ def generate_seed(canvas_height, canvas_width, min_auto_seed_percent, max_auto_s
 
     current_seed.clear()
     min_alive_cells = int((canvas_height * canvas_width) * (min_auto_seed_percent.get() / 100))
-    print(min_alive_cells)
     max_alive_cells = int((canvas_height * canvas_width) * (max_auto_seed_percent.get() / 100))
-    print(max_alive_cells)
     amount_of_cells_to_seed = random.randint(min_alive_cells, max_alive_cells)
 
     if VERBOSE:
