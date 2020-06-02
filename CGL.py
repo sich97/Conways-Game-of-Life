@@ -22,7 +22,6 @@ import pathlib
 
 VERBOSE = False
 PRINT_INTRO = False
-GET_USER_INPUT = False
 DEFAULT_CANVAS_HEIGHT = 100
 DEFAULT_CANVAS_WIDTH = DEFAULT_CANVAS_HEIGHT
 DEFAULT_MAX_FRAMERATE = 60
@@ -42,7 +41,7 @@ def main():
     # Initialization
     if VERBOSE:
         print("Starting initialization")
-    drawn_cells, pause_signal, top, canvas, restart_button, pause_button, current_seed, canvas_height_input,\
+    drawn_cells, pause_signal, canvas, restart_button, pause_button, current_seed, canvas_height_input,\
         canvas_width_input, next_frame_signal, next_frame_button, max_framerate, min_auto_seed_percent,\
         max_auto_seed_percent = initialize()
     if VERBOSE:
@@ -87,27 +86,25 @@ def print_intro():
 def initialize():
     """
     Instantiates a couple of variables which will be used later
-    :return: drawn_cells (dict), pause_signal (Signal), top (tkinter.Tk), canvas (tkinter.Canvas),
+    :return: drawn_cells (dict), pause_signal (Signal), canvas (tkinter.Canvas),
     button_new_sim (tkinter.Button), button_pause_sim (tkinter.Button), current_seed (list),
     canvas_height_input (tkinter.Entry), canvas_width_input (tkinter.Entry), next_frame_signal (Signal),
-    next_frame_button (tkinter.Button), max_framerate (float), min_auto_seed_percent (float),
-    max_auto_seed_percent (float)
+    next_frame_button (tkinter.Button), max_framerate (float), min_auto_seed_percent (tkinter.IntVar),
+    max_auto_seed_percent (tkinter.IntVar)
     """
     drawn_cells = {}
     pause_signal = Signal("pause_signal", False)
     next_frame_signal = Signal("next_frame_signal", False)
     current_seed = []
     max_framerate = 1 / DEFAULT_MAX_FRAMERATE
-    min_auto_seed_percent = DEFAULT_MIN_AUTO_SEED_PERCENT / 100
-    max_auto_seed_percent = DEFAULT_MAX_AUTO_SEED_PERCENT / 100
 
     # Creates the graphical window
-    top, canvas, button_new_sim, button_pause_sim, canvas_height_input,\
-        canvas_width_input, next_frame_button = create_gui("Conway's Game of Life", pause_signal, min_auto_seed_percent,
-                                                           max_auto_seed_percent, drawn_cells, max_framerate,
-                                                           current_seed, next_frame_signal)
+    canvas, button_new_sim, button_pause_sim, canvas_height_input,\
+        canvas_width_input, next_frame_button, min_auto_seed_percent,\
+        max_auto_seed_percent = create_gui("Conway's Game of Life", pause_signal, drawn_cells, max_framerate,
+                                           current_seed, next_frame_signal)
 
-    return drawn_cells, pause_signal, top, canvas, button_new_sim, button_pause_sim, current_seed,\
+    return drawn_cells, pause_signal, canvas, button_new_sim, button_pause_sim, current_seed,\
         canvas_height_input, canvas_width_input, next_frame_signal, next_frame_button, max_framerate,\
         min_auto_seed_percent, max_auto_seed_percent
 
@@ -118,9 +115,9 @@ def game_loop(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, canvas,
     """
     Creates and runs a simulation
     :param min_auto_seed_percent: The minimum percentage of the grid which will be alive initially
-    :type min_auto_seed_percent: float
+    :type min_auto_seed_percent: tkinter.IntVar
     :param max_auto_seed_percent: The maximum percentage of the grid which will be alive initially
-    :type max_auto_seed_percent: float
+    :type max_auto_seed_percent: tkinter.IntVar
     :param drawn_cells: The dictionary of already rendered pixels
     :type drawn_cells: dict
     :param canvas: The instance of a tkinter canvas that visualizes the game
@@ -208,18 +205,13 @@ def load_seed_from_file(current_seed):
     return canvas_height, canvas_width
 
 
-def create_gui(title, pause_signal, min_auto_seed_percent, max_auto_seed_percent, drawn_cells, max_framerate,
-               current_seed, next_frame_signal):
+def create_gui(title, pause_signal, drawn_cells, max_framerate, current_seed, next_frame_signal):
     """
     Uses tkinter to create a graphical user interface for visualizing the simulation and controlling the program.
     :param title: The window title
     :type title: string
     :param pause_signal: The signal which controls whether or not to pause the loop
     :type pause_signal: Signal
-    :param min_auto_seed_percent: The minimum percentage of the grid which will be alive initially
-    :type min_auto_seed_percent: float
-    :param max_auto_seed_percent: The maximum percentage of the grid which will be alive initially
-    :type max_auto_seed_percent: float
     :param drawn_cells: The dictionary of already rendered pixels
     :type drawn_cells: dict
     :param max_framerate: The maximum amount of times per second the program will run this loop
@@ -229,8 +221,9 @@ def create_gui(title, pause_signal, min_auto_seed_percent, max_auto_seed_percent
     :param next_frame_signal: The signal which controls whether or not to move to the next frame
     while the simulation is paused
     :type next_frame_signal: Signal
-    :return: top (tkinter.Tk), canvas (tkinter.Canvas), button_new_sim (tkinter.Button),
-    button_pause_sim (tkinter.Button), canvas_height_input (tkinter.Entry), canvas_width_input (tkinter.Entry)
+    :return: canvas (tkinter.Canvas), button_new_sim (tkinter.Button),
+    button_pause_sim (tkinter.Button), canvas_height_input (tkinter.Entry), canvas_width_input (tkinter.Entry),
+    min_seed_percent (tkinter.IntVar), max_seed_percent (tkinter.IntVar)
     """
     if VERBOSE:
         print("Creating canvas")
@@ -247,75 +240,226 @@ def create_gui(title, pause_signal, min_auto_seed_percent, max_auto_seed_percent
         canvas_width = DEFAULT_CANVAS_WIDTH
 
     # Creating the main window
-    top = tkinter.Tk()
-    top.minsize(height=canvas_height, width=canvas_width)
-    top.title(title)
+    window = tkinter.Tk()
+    window.minsize(height=canvas_height, width=canvas_width)
+    window.title(title)
+
+    # Creating the settings frame
+    settings_frame = tkinter.Frame(window)
+    settings_frame.grid(row=0, column=0, padx=10, pady=10)
+
+    # Creating the canvas frame
+    canvas_frame = tkinter.Frame(window)
+    canvas_frame.grid(row=0, column=1, padx=10, pady=10)
 
     # The canvas that the cells are drawn onto
-    canvas = tkinter.Canvas(top, height=canvas_height, width=canvas_width, bg="black")
+    canvas = tkinter.Canvas(canvas_frame, height=canvas_height, width=canvas_width, bg="black")
 
-    # Create canvas_size inputs
-    canvas_height_label, canvas_height_input, button_set_canvas_height, canvas_width_label,\
-        canvas_width_input, button_set_canvas_width = create_canvas_size_inputs(top, canvas)
+    # Seed_percent inputs
+    min_seed_percent, max_seed_percent, min_seed_percent_label, max_seed_percent_label,\
+        min_seed_percent_input, max_seed_percent_input, min_seed_percent_input_status,\
+        max_seed_percent_input_status = create_seed_percent_inputs(settings_frame)
+
+    # Canvas_size inputs
+    canvas_height_label, canvas_height_input, canvas_width_label, canvas_width_input, canvas_height_input_status,\
+        canvas_width_input_status = create_canvas_size_inputs(settings_frame)
+
+    # Apply settings button
+    button_apply_settings = tkinter.Button(settings_frame, text="Apply settings",
+                                           command=lambda: apply_settings(canvas, canvas_height_input,
+                                                                          canvas_width_input, min_seed_percent_input,
+                                                                          max_seed_percent_input, min_seed_percent,
+                                                                          max_seed_percent,
+                                                                          min_seed_percent_input_status,
+                                                                          max_seed_percent_input_status,
+                                                                          canvas_height_input_status,
+                                                                          canvas_width_input_status))
 
     # Button for pausing the simulation
-    button_pause_sim = tkinter.Button(top, text="Pause", command=lambda: pause_signal.change_state())
+    button_pause_sim = tkinter.Button(canvas_frame, text="Pause", command=lambda: pause_signal.change_state())
 
     # Button for manually moving to the next frame while the simulation is paused
-    next_frame_button = tkinter.Button(top, text="Next frame", command=lambda: next_frame_signal.change_state())
+    next_frame_button = tkinter.Button(canvas_frame, text="Next frame",
+                                       command=lambda: next_frame_signal.change_state())
 
     # Button for replaying the current simulation
-    button_replay_sim = create_sim_mode_buttons(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, top,
-                                                canvas, max_framerate, pause_signal, button_pause_sim, "Replay",
-                                                current_seed, canvas_height_input, canvas_width_input,
+    button_replay_sim = create_sim_mode_buttons(min_seed_percent, max_seed_percent, drawn_cells,
+                                                canvas_frame, canvas, max_framerate, pause_signal, button_pause_sim,
+                                                "Replay", current_seed, canvas_height_input, canvas_width_input,
                                                 next_frame_signal, next_frame_button)
 
     # Button for creating a new simulation
-    button_new_sim = create_sim_mode_buttons(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, top,
+    button_new_sim = create_sim_mode_buttons(min_seed_percent, max_seed_percent, drawn_cells, canvas_frame,
                                              canvas, max_framerate, pause_signal, button_pause_sim, "New",
                                              current_seed, canvas_height_input, canvas_width_input, next_frame_signal,
                                              next_frame_button)
 
     # Button for loading an existing simulation
-    button_load_sim = create_sim_mode_buttons(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, top,
+    button_load_sim = create_sim_mode_buttons(min_seed_percent, max_seed_percent, drawn_cells, canvas_frame,
                                               canvas, max_framerate, pause_signal, button_pause_sim, "Load",
                                               current_seed, canvas_height_input, canvas_width_input, next_frame_signal,
                                               next_frame_button)
 
     # Arrange the widgets on screen
+    # Settings frame
+    min_seed_percent_label.grid(row=0, column=0)
+    min_seed_percent_input.grid(row=0, column=1)
+    min_seed_percent_input_status.grid(row=0, column=2)
+    max_seed_percent_label.grid(row=1, column=0)
+    max_seed_percent_input.grid(row=1, column=1)
+    max_seed_percent_input_status.grid(row=1, column=2)
+    canvas_height_label.grid(row=2, column=0)
+    canvas_height_input.grid(row=2, column=1)
+    canvas_height_input_status.grid(row=2, column=2)
+    canvas_width_label.grid(row=3, column=0)
+    canvas_width_input.grid(row=3, column=1)
+    canvas_width_input_status.grid(row=3, column=2)
+    button_apply_settings.grid(row=4, column=1)
+
+    # Canvas frame
     canvas.grid(row=0, column=1)
     button_pause_sim.grid(row=1, column=1)
-    button_replay_sim.grid(row=2, column=0)
-    button_new_sim.grid(row=2, column=1)
+    button_new_sim.grid(row=2, column=0)
+    button_replay_sim.grid(row=2, column=1)
     button_load_sim.grid(row=2, column=2)
-    canvas_height_label.grid(row=3, column=0)
-    canvas_height_input.grid(row=3, column=1)
-    button_set_canvas_height.grid(row=3, column=2)
-    canvas_width_label.grid(row=4, column=0)
-    canvas_width_input.grid(row=4, column=1)
-    button_set_canvas_width.grid(row=4, column=2)
 
     canvas.update()
 
     if VERBOSE:
         print("Canvas created")
 
-    return top, canvas, button_new_sim, button_pause_sim, canvas_height_input, canvas_width_input, next_frame_button
+    return canvas, button_new_sim, button_pause_sim, canvas_height_input, canvas_width_input, next_frame_button,\
+        min_seed_percent, max_seed_percent
 
 
-def create_sim_mode_buttons(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, top, canvas,
+def apply_settings(canvas, canvas_height_input, canvas_width_input, min_seed_percent_input, max_seed_percent_input,
+                   min_seed_percent, max_seed_percent, min_seed_percent_input_status, max_seed_percent_input_status,
+                   canvas_height_input_status, canvas_width_input_status):
+    """
+    Applies the settings in the settings frame
+    :param canvas: The canvas that the cells are drawn onto
+    :type canvas: tkinter.Canvas
+    :param canvas_height_input: The input field for the canvas height
+    :type canvas_height_input: tkinter.Entry
+    :param canvas_width_input:  The input field for the canvas width
+    :type canvas_width_input: tkinter.Entry
+    :param min_seed_percent_input: The input field for the minimum seed percentage
+    :type min_seed_percent_input: tkinter.Entry
+    :param max_seed_percent_input: The input field for the maximum seed percentage
+    :type max_seed_percent_input: tkinter.Entry
+    :param min_seed_percent: The variable for the minimum seed percentage
+    :type min_seed_percent: tkinter.IntVar
+    :param max_seed_percent: The variable for the maximum seed percentage
+    :type max_seed_percent: tkinter.IntVar
+    :param min_seed_percent_input_status: Outputs to the user the status of the input
+    :type min_seed_percent_input_status: tkinter.Label
+    :param max_seed_percent_input_status: Outputs to the user the status of the input
+    :type max_seed_percent_input_status: tkinter.Label
+    :param canvas_height_input_status: Outputs to the user the status of the input
+    :type canvas_height_input_status: tkinter.Label
+    :param canvas_width_input_status: Outputs to the user the status of the input
+    :type canvas_width_input_status: tkinter.Label
+    :return:
+    """
+    # Apply canvas size settings
+    new_height = canvas_height_input.get()
+    new_width = canvas_width_input.get()
+
+    if new_height is not "":
+        try:
+            new_height = int(new_height)
+            canvas_height_input_status.config(text="OK")
+        except ValueError:
+            canvas_height_input_status.config(text="ERROR: Not an integer!")
+            new_height = canvas.winfo_height() - 2
+
+        canvas.config(height=new_height)
+
+    else:
+        canvas_height_input_status.config(text="ERROR: No input!")
+
+    if new_width is not "":
+        try:
+            new_width = int(new_width)
+            canvas_width_input_status.config(text="OK")
+        except ValueError:
+            canvas_width_input_status.config(text="ERROR: Not an integer!")
+            new_width = canvas.winfo_width() - 2
+
+        canvas.config(width=new_width)
+
+    else:
+        canvas_width_input_status.config(text="ERROR: No input!")
+
+    # Apply seed settings
+    new_min_seed_percent = min_seed_percent_input.get()
+    new_max_seed_percent = max_seed_percent_input.get()
+
+    if new_min_seed_percent is not "":
+        try:
+            new_min_seed_percent = int(new_min_seed_percent)
+            min_seed_percent_input_status.config(text="OK")
+        except ValueError:
+            min_seed_percent_input_status.config(text="ERROR: Not an integer!")
+            new_min_seed_percent = min_seed_percent.get()
+
+        min_seed_percent.set(new_min_seed_percent)
+
+    else:
+        min_seed_percent_input_status.config(text="ERROR: No input!")
+
+    if new_max_seed_percent is not "":
+        try:
+            new_max_seed_percent = int(new_max_seed_percent)
+            max_seed_percent_input_status.config(text="OK")
+        except ValueError:
+            max_seed_percent_input_status.config(text="ERROR: Not an integer!")
+            new_max_seed_percent = max_seed_percent.get()
+
+        max_seed_percent.set(new_max_seed_percent)
+
+    else:
+        max_seed_percent_input_status.config(text="ERROR: No input!")
+
+
+def create_seed_percent_inputs(settings_frame):
+    """
+    Instantiates the labels, inputs and variables for controlling the seed percentages
+    :param settings_frame: The frame in which these widgets will be drawn
+    :type settings_frame: tkinter.Frame
+    :return: min_seed_percent (tkinter.IntVar), max_seed_percent (tkinter.IntVar),
+    min_seed_percent_label (tkinter.Label), max_seed_percent_label (tkinter.Label),
+    min_seed_percent_input (tkinter.Entry), max_seed_percent_input (tkinter.Entry),
+    min_seed_percent_input_status (tkinter.Label), max_seed_percent_input_status (tkinter.Label)
+    """
+    min_seed_percent = tkinter.IntVar(settings_frame, DEFAULT_MIN_AUTO_SEED_PERCENT)
+    max_seed_percent = tkinter.IntVar(settings_frame, DEFAULT_MAX_AUTO_SEED_PERCENT)
+    min_seed_percent_label = tkinter.Label(settings_frame, text="Minimum seed percentage: ")
+    max_seed_percent_label = tkinter.Label(settings_frame, text="Maximum seed percentage: ")
+    min_seed_percent_input = tkinter.Entry(settings_frame)
+    max_seed_percent_input = tkinter.Entry(settings_frame)
+    min_seed_percent_input.insert(0, min_seed_percent.get())
+    max_seed_percent_input.insert(0, max_seed_percent.get())
+    min_seed_percent_input_status = tkinter.Label(settings_frame, text="Default value")
+    max_seed_percent_input_status = tkinter.Label(settings_frame, text="Default value")
+
+    return min_seed_percent, max_seed_percent, min_seed_percent_label, max_seed_percent_label,\
+        min_seed_percent_input, max_seed_percent_input, min_seed_percent_input_status, max_seed_percent_input_status
+
+
+def create_sim_mode_buttons(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, canvas_frame, canvas,
                             max_framerate, pause_signal, button_pause_sim, mode, current_seed, canvas_height_input,
                             canvas_width_input, next_frame_signal, next_frame_button):
     """
     Creates a button that will call the game loop function with a mode determined by the 'mode' parameter
     :param min_auto_seed_percent: The minimum percentage of the grid which will be alive initially
-    :type min_auto_seed_percent: float
+    :type min_auto_seed_percent: tkinter.IntVar
     :param max_auto_seed_percent: The maximum percentage of the grid which will be alive initially
-    :type max_auto_seed_percent: float
+    :type max_auto_seed_percent: tkinter.IntVar
     :param drawn_cells: The dictionary of already rendered pixels
     :type drawn_cells: dict
-    :param top: The parent window
-    :type top: tkinter.Tk
+    :param canvas_frame: The parent window
+    :type canvas_frame: tkinter.Frame
     :param canvas: The canvas where the cells will be drawn
     :type canvas: tkinter.Canvas
     :param max_framerate: The maximum amount of times per second the program will run this loop
@@ -342,73 +486,44 @@ def create_sim_mode_buttons(min_auto_seed_percent, max_auto_seed_percent, drawn_
     """
     mode_lowercase = mode.lower()
     button_name = "button_" + mode_lowercase + "_sim"
-    vars()[button_name] = tkinter.Button(top, text=mode, command=lambda: game_loop(min_auto_seed_percent,
-                                                                                   max_auto_seed_percent, drawn_cells,
-                                                                                   canvas, max_framerate, pause_signal,
-                                                                                   button_pause_sim, mode_lowercase,
-                                                                                   current_seed, canvas_height_input,
-                                                                                   canvas_width_input,
-                                                                                   next_frame_signal,
-                                                                                   next_frame_button))
+    vars()[button_name] = tkinter.Button(canvas_frame, text=mode, command=lambda: game_loop(min_auto_seed_percent,
+                                                                                            max_auto_seed_percent,
+                                                                                            drawn_cells,
+                                                                                            canvas, max_framerate,
+                                                                                            pause_signal,
+                                                                                            button_pause_sim,
+                                                                                            mode_lowercase,
+                                                                                            current_seed,
+                                                                                            canvas_height_input,
+                                                                                            canvas_width_input,
+                                                                                            next_frame_signal,
+                                                                                            next_frame_button))
 
     return vars()[button_name]
 
 
-def create_canvas_size_inputs(top, canvas):
+def create_canvas_size_inputs(settings_frame):
     """
     Creates the labels, input fields and buttons for changing the canvas size through the GUI
-    :param top: The parent graphical window container
-    :type top: tkinter.Tk
-    :param canvas: The part of the window that the cells are drawn on
-    :type canvas: tkinter.Canvas
+    :param settings_frame: The parent graphical window container
+    :type settings_frame: tkinter.Frame
     :return: canvas_height_label (tkinter.Label), canvas_height_input (tkinter.Entry),
-    button_set_canvas_height (tkinter.Button), canvas_width_label (tkinter.Label), canvas_width_input (tkinter.Label),
-    button_set_canvas_width (tkinter.Button)
+    canvas_width_label (tkinter.Label), canvas_width_input (tkinter.Label)
     """
     # Canvas height input
-    canvas_height_label = tkinter.Label(top, text="Canvas height: ")
-    canvas_height_input = tkinter.Entry(top)
+    canvas_height_label = tkinter.Label(settings_frame, text="Canvas height: ")
+    canvas_height_input = tkinter.Entry(settings_frame)
     canvas_height_input.insert(0, DEFAULT_CANVAS_HEIGHT)
-    button_set_canvas_height = tkinter.Button(top, text="Set canvas height",
-                                              command=lambda: change_canvas_size("height", canvas, canvas_height_input))
+    canvas_height_input_status = tkinter.Label(settings_frame, text="Default value")
 
     # Canvas width input
-    canvas_width_label = tkinter.Label(top, text="Canvas width: ")
-    canvas_width_input = tkinter.Entry(top)
+    canvas_width_label = tkinter.Label(settings_frame, text="Canvas width: ")
+    canvas_width_input = tkinter.Entry(settings_frame)
     canvas_width_input.insert(0, DEFAULT_CANVAS_WIDTH)
-    button_set_canvas_width = tkinter.Button(top, text="Set canvas width",
-                                             command=lambda: change_canvas_size("width", canvas, canvas_width_input))
+    canvas_width_input_status = tkinter.Label(settings_frame, text="Default value")
 
-    return canvas_height_label, canvas_height_input, button_set_canvas_height, canvas_width_label, canvas_width_input,\
-        button_set_canvas_width
-
-
-def change_canvas_size(direction, canvas, entry_box):
-    """
-    Changes the size of the canvas in the given direction by the amount specified in the entry box
-    :param direction: Whether or not the size shall be changed in height or width
-    :type direction: str
-    :param canvas: The part of the window that stuff is drawn on (?)
-    :type canvas: tkinter.Canvas
-    :param entry_box: The input field
-    :type entry_box: tkinter.Entry
-    :return: None
-    """
-    input_value = entry_box.get()
-    if input_value is not None:
-        try:
-            int_value = int(input_value)
-        except ValueError:
-            print("You did not input an integer when setting canvas " + direction)
-            if direction == "height":
-                int_value = canvas.winfo_height() - 2
-            else:
-                int_value = canvas.winfo_width() - 2
-
-        if direction == "height":
-            canvas.config(height=int_value)
-        elif direction == "width":
-            canvas.config(width=int_value)
+    return canvas_height_label, canvas_height_input, canvas_width_label, canvas_width_input,\
+        canvas_height_input_status, canvas_width_input_status
 
 
 def create_simulation(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, canvas, mode, current_seed,
@@ -416,9 +531,9 @@ def create_simulation(min_auto_seed_percent, max_auto_seed_percent, drawn_cells,
     """
     Resets necessary variables and generates new values for next simulation.
     :param min_auto_seed_percent: The minimum percentage of the grid which will be alive initially
-    :type min_auto_seed_percent: float
+    :type min_auto_seed_percent: tkinter.IntVar
     :param max_auto_seed_percent: The maximum percentage of the grid which will be alive initially
-    :type max_auto_seed_percent: float
+    :type max_auto_seed_percent: tkinter.IntVar
     :param drawn_cells: The dictionary of already rendered pixels
     :type drawn_cells: dict
     :param canvas: The instance of a tkinter canvas that visualizes the game
@@ -495,9 +610,9 @@ def generate_seed(canvas_height, canvas_width, min_auto_seed_percent, max_auto_s
     :param canvas_width: The width of the canvas in pixels
     :type canvas_width: int
     :param min_auto_seed_percent: The minimum percentage of the grid which will be alive initially
-    :type min_auto_seed_percent: float
+    :type min_auto_seed_percent: tkinter.IntVar
     :param max_auto_seed_percent: The maximum percentage of the grid which will be alive initially
-    :type max_auto_seed_percent: float
+    :type max_auto_seed_percent: tkinter.IntVar
     :param current_seed: The seed that determines which cells start as alive or not
     :type current_seed: list of lists
     :return: None
@@ -507,8 +622,10 @@ def generate_seed(canvas_height, canvas_width, min_auto_seed_percent, max_auto_s
         print("Preparing variables")
 
     current_seed.clear()
-    min_alive_cells = int((canvas_height * canvas_width) * min_auto_seed_percent)
-    max_alive_cells = int((canvas_height * canvas_width) * max_auto_seed_percent)
+    min_alive_cells = int((canvas_height * canvas_width) * (min_auto_seed_percent.get() / 100))
+    print(min_alive_cells)
+    max_alive_cells = int((canvas_height * canvas_width) * (max_auto_seed_percent.get() / 100))
+    print(max_alive_cells)
     amount_of_cells_to_seed = random.randint(min_alive_cells, max_alive_cells)
 
     if VERBOSE:
