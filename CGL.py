@@ -24,7 +24,7 @@ VERBOSE = False
 PRINT_INTRO = False
 DEFAULT_CANVAS_HEIGHT = 100
 DEFAULT_CANVAS_WIDTH = DEFAULT_CANVAS_HEIGHT
-DEFAULT_MAX_FRAMERATE = 60
+DEFAULT_MAX_FRAMERATE = 30
 DEFAULT_MIN_AUTO_SEED_PERCENT = 5
 DEFAULT_MAX_AUTO_SEED_PERCENT = 20
 
@@ -89,20 +89,19 @@ def initialize():
     :return: drawn_cells (dict), pause_signal (Signal), canvas (tkinter.Canvas),
     button_new_sim (tkinter.Button), button_pause_sim (tkinter.Button), current_seed (list),
     canvas_height_input (tkinter.Entry), canvas_width_input (tkinter.Entry), next_frame_signal (Signal),
-    next_frame_button (tkinter.Button), max_framerate (float), min_auto_seed_percent (tkinter.IntVar),
+    next_frame_button (tkinter.Button), max_framerate (tkinter.IntVar), min_auto_seed_percent (tkinter.IntVar),
     max_auto_seed_percent (tkinter.IntVar)
     """
     drawn_cells = {}
     pause_signal = Signal("pause_signal", False)
     next_frame_signal = Signal("next_frame_signal", False)
     current_seed = []
-    max_framerate = 1 / DEFAULT_MAX_FRAMERATE
 
     # Creates the graphical window
     canvas, button_new_sim, button_pause_sim, canvas_height_input,\
         canvas_width_input, next_frame_button, min_auto_seed_percent,\
-        max_auto_seed_percent = create_gui("Conway's Game of Life", pause_signal, drawn_cells, max_framerate,
-                                           current_seed, next_frame_signal)
+        max_auto_seed_percent, max_framerate = create_gui("Conway's Game of Life", pause_signal, drawn_cells,
+                                                          current_seed, next_frame_signal)
 
     return drawn_cells, pause_signal, canvas, button_new_sim, button_pause_sim, current_seed,\
         canvas_height_input, canvas_width_input, next_frame_signal, next_frame_button, max_framerate,\
@@ -123,7 +122,7 @@ def game_loop(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, canvas,
     :param canvas: The instance of a tkinter canvas that visualizes the game
     :type canvas: tkinter.Canvas
     :param max_framerate: The maximum amount of times per second the program will run this loop
-    :type max_framerate: float
+    :type max_framerate: tkinter.IntVar
     :param pause_signal: The signal which controls whether or not to pause the loop
     :type pause_signal: Signal
     :param pause_button: The button which changes the pause_signal
@@ -205,7 +204,7 @@ def load_seed_from_file(current_seed):
     return canvas_height, canvas_width
 
 
-def create_gui(title, pause_signal, drawn_cells, max_framerate, current_seed, next_frame_signal):
+def create_gui(title, pause_signal, drawn_cells, current_seed, next_frame_signal):
     """
     Uses tkinter to create a graphical user interface for visualizing the simulation and controlling the program.
     :param title: The window title
@@ -214,8 +213,6 @@ def create_gui(title, pause_signal, drawn_cells, max_framerate, current_seed, ne
     :type pause_signal: Signal
     :param drawn_cells: The dictionary of already rendered pixels
     :type drawn_cells: dict
-    :param max_framerate: The maximum amount of times per second the program will run this loop
-    :type max_framerate: float
     :param current_seed: The seed that determines which cells start as alive or note
     :type current_seed: list of lists
     :param next_frame_signal: The signal which controls whether or not to move to the next frame
@@ -223,7 +220,7 @@ def create_gui(title, pause_signal, drawn_cells, max_framerate, current_seed, ne
     :type next_frame_signal: Signal
     :return: canvas (tkinter.Canvas), button_new_sim (tkinter.Button),
     button_pause_sim (tkinter.Button), canvas_height_input (tkinter.Entry), canvas_width_input (tkinter.Entry),
-    min_seed_percent (tkinter.IntVar), max_seed_percent (tkinter.IntVar)
+    min_seed_percent (tkinter.IntVar), max_seed_percent (tkinter.IntVar), max_framerate (tkinter.IntVar)
     """
     if VERBOSE:
         print("Creating canvas")
@@ -264,6 +261,10 @@ def create_gui(title, pause_signal, drawn_cells, max_framerate, current_seed, ne
     canvas_height_label, canvas_height_input, canvas_width_label, canvas_width_input, canvas_height_input_status,\
         canvas_width_input_status = create_canvas_size_inputs(settings_frame)
 
+    # Max framerate inputs
+    max_framerate_label, max_framerate_input, max_framerate,\
+        max_framerate_input_status = create_max_framerate_inputs(settings_frame)
+
     # Apply settings button
     button_apply_settings = tkinter.Button(settings_frame, text="Apply settings",
                                            command=lambda: apply_settings(canvas, canvas_height_input,
@@ -273,7 +274,9 @@ def create_gui(title, pause_signal, drawn_cells, max_framerate, current_seed, ne
                                                                           min_seed_percent_input_status,
                                                                           max_seed_percent_input_status,
                                                                           canvas_height_input_status,
-                                                                          canvas_width_input_status))
+                                                                          canvas_width_input_status,
+                                                                          max_framerate_input, max_framerate,
+                                                                          max_framerate_input_status))
 
     # Button for pausing the simulation
     button_pause_sim = tkinter.Button(canvas_frame, text="Pause", command=lambda: pause_signal.change_state())
@@ -314,7 +317,10 @@ def create_gui(title, pause_signal, drawn_cells, max_framerate, current_seed, ne
     canvas_width_label.grid(row=3, column=0)
     canvas_width_input.grid(row=3, column=1)
     canvas_width_input_status.grid(row=3, column=2)
-    button_apply_settings.grid(row=4, column=1)
+    max_framerate_label.grid(row=4, column=0)
+    max_framerate_input.grid(row=4, column=1)
+    max_framerate_input_status.grid(row=4, column=2)
+    button_apply_settings.grid(row=5, column=1)
 
     # Canvas frame
     canvas.grid(row=0, column=1)
@@ -329,12 +335,30 @@ def create_gui(title, pause_signal, drawn_cells, max_framerate, current_seed, ne
         print("Canvas created")
 
     return canvas, button_new_sim, button_pause_sim, canvas_height_input, canvas_width_input, next_frame_button,\
-        min_seed_percent, max_seed_percent
+        min_seed_percent, max_seed_percent, max_framerate
+
+
+def create_max_framerate_inputs(settings_frame):
+    """
+    Instantiates the labels, inputs and variables for controlling the max framerate
+    :param settings_frame: The frame in which these widgets will be drawn
+    :type settings_frame: tkinter.Frame
+    :return: max_framerate_label (tkinter.Label), max_framerate_input (tkinter.Entry), max_framerate (tkinter.IntVar),
+    max_framerate_input_status (tkinter.Label)
+    """
+    max_framerate = tkinter.IntVar(settings_frame, DEFAULT_MAX_FRAMERATE)
+    max_framerate_label = tkinter.Label(settings_frame, text="Max framerate: ")
+    max_framerate_input = tkinter.Entry(settings_frame)
+    max_framerate_input.insert(0, max_framerate.get())
+    max_framerate_input_status = tkinter.Label(settings_frame, text="Default value")
+
+    return max_framerate_label, max_framerate_input, max_framerate, max_framerate_input_status
 
 
 def apply_settings(canvas, canvas_height_input, canvas_width_input, min_seed_percent_input, max_seed_percent_input,
                    min_seed_percent, max_seed_percent, min_seed_percent_input_status, max_seed_percent_input_status,
-                   canvas_height_input_status, canvas_width_input_status):
+                   canvas_height_input_status, canvas_width_input_status, max_framerate_input, max_framerate,
+                   max_framerate_input_status):
     """
     Applies the settings in the settings frame
     :param canvas: The canvas that the cells are drawn onto
@@ -359,7 +383,13 @@ def apply_settings(canvas, canvas_height_input, canvas_width_input, min_seed_per
     :type canvas_height_input_status: tkinter.Label
     :param canvas_width_input_status: Outputs to the user the status of the input
     :type canvas_width_input_status: tkinter.Label
-    :return:
+    :param max_framerate_input: The input field for the max framerate
+    :type max_framerate_input: tkinter.Entry
+    :param max_framerate: The variable for the maximum framerate
+    :type max_framerate: tkinter.IntVar
+    :param max_framerate_input_status: Outputs to the user the status of the input
+    :type max_framerate_input_status: tkinter.Label
+    :return: None
     """
     # Apply canvas size settings
     new_height = canvas_height_input.get()
@@ -421,6 +451,22 @@ def apply_settings(canvas, canvas_height_input, canvas_width_input, min_seed_per
     else:
         max_seed_percent_input_status.config(text="ERROR: No input!")
 
+    # Apply max framerate settings
+    new_max_framerate = max_framerate_input.get()
+
+    if new_max_framerate != "":
+        try:
+            new_max_framerate = int(new_max_framerate)
+            max_framerate_input_status.config(text="OK")
+        except ValueError:
+            max_framerate_input_status.config(text="ERROR: Not an integer!")
+            new_max_framerate = max_framerate.get()
+
+        max_framerate.set(new_max_framerate)
+
+    else:
+        max_framerate_input_status.config(text="ERROR: No input!")
+
 
 def create_seed_percent_inputs(settings_frame):
     """
@@ -463,7 +509,7 @@ def create_sim_mode_buttons(min_auto_seed_percent, max_auto_seed_percent, drawn_
     :param canvas: The canvas where the cells will be drawn
     :type canvas: tkinter.Canvas
     :param max_framerate: The maximum amount of times per second the program will run this loop
-    :type max_framerate: float
+    :type max_framerate: tkinter.IntVar
     :param pause_signal: The signal which controls whether or not to pause the loop
     :type pause_signal: Signal
     :param button_pause_sim: The button which controls the pause signal
@@ -727,7 +773,7 @@ def run_simulation(max_framerate, drawn_cells, pause_signal, canvas, pause_butto
     """
     Generates new generations, draws them on screen, then repeats.
     :param max_framerate: The maximum amount of times per second the program will run this loop
-    :type max_framerate: float
+    :type max_framerate: tkinter.IntVar
     :param drawn_cells: The dictionary of already rendered pixels
     :type drawn_cells: dict
     :param pause_signal: The signal which controls whether or not to pause the loop
@@ -805,13 +851,15 @@ def run_simulation(max_framerate, drawn_cells, pause_signal, canvas, pause_butto
         # Limits automatic loop to max_framerate
         end = timer()
         loop_time = end - start
-        if not loop_time > max_framerate:
-            time_to_sleep = max_framerate - loop_time
-
+        max_framerate_calculated = 1 / max_framerate.get()
+        while loop_time < max_framerate_calculated:
             if VERBOSE:
-                print("Waiting " + str(time_to_sleep) + " seconds")
+                print("Held by max framerate")
 
-            time.sleep(time_to_sleep)
+            end = timer()
+            loop_time = end - start
+            canvas.update()
+            time.sleep(0.01)
 
 
 def draw_canvas(canvas, grid, drawn_cells):
