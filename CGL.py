@@ -259,6 +259,12 @@ def create_gui(title, drawn_cells, current_seed):
     max_framerate_label, max_framerate_input, max_framerate,\
         max_framerate_input_status = create_max_framerate_inputs(settings_frame)
 
+    # Load defaults button
+    button_load_defaults = tkinter.Button(settings_frame, text="Load defaults",
+                                          command=lambda: load_defaults(min_seed_percent_input, max_seed_percent_input,
+                                                                        canvas_height_input, canvas_width_input,
+                                                                        max_framerate_input))
+
     # Apply settings button
     button_apply_settings = tkinter.Button(settings_frame, text="Apply settings",
                                            command=lambda: apply_settings(canvas, canvas_height_input,
@@ -303,22 +309,23 @@ def create_gui(title, drawn_cells, current_seed):
 
     # Arrange the widgets on screen
     # Settings frame
-    min_seed_percent_label.grid(row=0, column=0)
-    min_seed_percent_input.grid(row=0, column=1)
-    min_seed_percent_input_status.grid(row=0, column=2)
-    max_seed_percent_label.grid(row=1, column=0)
-    max_seed_percent_input.grid(row=1, column=1)
-    max_seed_percent_input_status.grid(row=1, column=2)
-    canvas_height_label.grid(row=2, column=0)
-    canvas_height_input.grid(row=2, column=1)
-    canvas_height_input_status.grid(row=2, column=2)
-    canvas_width_label.grid(row=3, column=0)
-    canvas_width_input.grid(row=3, column=1)
-    canvas_width_input_status.grid(row=3, column=2)
-    max_framerate_label.grid(row=4, column=0)
-    max_framerate_input.grid(row=4, column=1)
-    max_framerate_input_status.grid(row=4, column=2)
-    button_apply_settings.grid(row=5, column=1)
+    button_load_defaults.grid(row=0, column=1)
+    min_seed_percent_label.grid(row=1, column=0)
+    min_seed_percent_input.grid(row=1, column=1)
+    min_seed_percent_input_status.grid(row=1, column=2)
+    max_seed_percent_label.grid(row=2, column=0)
+    max_seed_percent_input.grid(row=2, column=1)
+    max_seed_percent_input_status.grid(row=2, column=2)
+    canvas_height_label.grid(row=3, column=0)
+    canvas_height_input.grid(row=3, column=1)
+    canvas_height_input_status.grid(row=3, column=2)
+    canvas_width_label.grid(row=4, column=0)
+    canvas_width_input.grid(row=4, column=1)
+    canvas_width_input_status.grid(row=4, column=2)
+    max_framerate_label.grid(row=5, column=0)
+    max_framerate_input.grid(row=5, column=1)
+    max_framerate_input_status.grid(row=5, column=2)
+    button_apply_settings.grid(row=6, column=1)
 
     # Canvas frame
     canvas.grid(row=0, column=1)
@@ -471,6 +478,41 @@ def apply_settings(canvas, canvas_height_input, canvas_width_input, min_seed_per
 
     else:
         max_framerate_input_status.config(text="ERROR: No input!")
+
+
+def load_defaults(min_seed_percent_input, max_seed_percent_input, canvas_height_input, canvas_width_input,
+                  max_framerate_input):
+    """
+    Sets all the input fields and their corresponding status label to the defaults
+    :param min_seed_percent_input: The input field for the minimum seed percentage
+    :type min_seed_percent_input: tkinter.Entry
+    :param max_seed_percent_input: The input field for the maximum seed percentage
+    :type max_seed_percent_input: tkinter.Entry
+    :param canvas_height_input: The input field for the canvas height
+    :type canvas_height_input: tkinter.Entry
+    :param canvas_width_input: The input field for the canvas width
+    :type canvas_width_input: tkinter.Entry
+    :param max_framerate_input: The input field for the max framerate
+    :type max_framerate_input: tkinter.Entry
+    :return:
+    """
+    # Seed percent inputs
+    min_seed_percent_input.delete(0, tkinter.END)
+    min_seed_percent_input.insert(0, DEFAULT_MIN_AUTO_SEED_PERCENT)
+
+    max_seed_percent_input.delete(0, tkinter.END)
+    max_seed_percent_input.insert(0, DEFAULT_MAX_AUTO_SEED_PERCENT)
+
+    # Canvas size inputs
+    canvas_height_input.delete(0, tkinter.END)
+    canvas_height_input.insert(0, DEFAULT_CANVAS_HEIGHT)
+
+    canvas_width_input.delete(0, tkinter.END)
+    canvas_width_input.insert(0, DEFAULT_CANVAS_WIDTH)
+
+    # Max framerate input
+    max_framerate_input.delete(0, tkinter.END)
+    max_framerate_input.insert(0, DEFAULT_MAX_FRAMERATE)
 
 
 def create_seed_percent_inputs(settings_frame):
