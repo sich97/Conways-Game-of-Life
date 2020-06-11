@@ -598,17 +598,17 @@ def create_seed_percent_inputs(settings_frame):
         min_seed_percent_input, max_seed_percent_input, min_seed_percent_input_status, max_seed_percent_input_status
 
 
-def create_sim_mode_buttons(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, canvas_frame, canvas,
+def create_sim_mode_buttons(min_seed_percent, max_seed_percent, drawn_cells, canvas_frame, canvas,
                             max_framerate, pause_signal, button_pause_sim, mode, current_seed, canvas_height_input,
                             canvas_width_input, next_frame_signal, next_frame_button, draw_seed_or_not, grid,
                             button_apply_drawn_seed, is_button_apply_drawn_seed_pressed, generation_counter,
                             shutting_down, window):
     """
     Creates a button that will call the game loop function with a mode determined by the 'mode' parameter
-    :param min_auto_seed_percent: The minimum percentage of the grid which will be alive initially
-    :type min_auto_seed_percent: tkinter.IntVar
-    :param max_auto_seed_percent: The maximum percentage of the grid which will be alive initially
-    :type max_auto_seed_percent: tkinter.IntVar
+    :param min_seed_percent: The minimum percentage of the grid which will be alive initially
+    :type min_seed_percent: tkinter.IntVar
+    :param max_seed_percent: The maximum percentage of the grid which will be alive initially
+    :type max_seed_percent: tkinter.IntVar
     :param drawn_cells: The dictionary of already rendered pixels
     :type drawn_cells: dict
     :param canvas_frame: The parent window
@@ -654,7 +654,7 @@ def create_sim_mode_buttons(min_auto_seed_percent, max_auto_seed_percent, drawn_
     mode_lowercase = mode.lower()
     button_name = "button_" + mode_lowercase + "_sim"
     vars()[button_name] = tkinter.Button(canvas_frame, text=mode,
-                                         command=lambda: game_loop(min_auto_seed_percent, max_auto_seed_percent,
+                                         command=lambda: game_loop(min_seed_percent, max_seed_percent,
                                                                    drawn_cells, canvas, max_framerate, pause_signal,
                                                                    button_pause_sim, mode_lowercase, current_seed,
                                                                    canvas_height_input, canvas_width_input,
