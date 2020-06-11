@@ -25,8 +25,8 @@ PRINT_INTRO = False
 DEFAULT_CANVAS_HEIGHT = 100
 DEFAULT_CANVAS_WIDTH = DEFAULT_CANVAS_HEIGHT
 DEFAULT_MAX_FRAMERATE = 30
-DEFAULT_MIN_AUTO_SEED_PERCENT = 5
-DEFAULT_MAX_AUTO_SEED_PERCENT = 20
+DEFAULT_MIN_SEED_PERCENT = 5
+DEFAULT_MAX_SEED_PERCENT = 20
 
 
 def main():
@@ -498,10 +498,10 @@ def load_defaults(min_seed_percent_input, max_seed_percent_input, canvas_height_
     """
     # Seed percent inputs
     min_seed_percent_input.delete(0, tkinter.END)
-    min_seed_percent_input.insert(0, DEFAULT_MIN_AUTO_SEED_PERCENT)
+    min_seed_percent_input.insert(0, DEFAULT_MIN_SEED_PERCENT)
 
     max_seed_percent_input.delete(0, tkinter.END)
-    max_seed_percent_input.insert(0, DEFAULT_MAX_AUTO_SEED_PERCENT)
+    max_seed_percent_input.insert(0, DEFAULT_MAX_SEED_PERCENT)
 
     # Canvas size inputs
     canvas_height_input.delete(0, tkinter.END)
@@ -525,8 +525,8 @@ def create_seed_percent_inputs(settings_frame):
     min_seed_percent_input (tkinter.Entry), max_seed_percent_input (tkinter.Entry),
     min_seed_percent_input_status (tkinter.Label), max_seed_percent_input_status (tkinter.Label)
     """
-    min_seed_percent = tkinter.IntVar(settings_frame, DEFAULT_MIN_AUTO_SEED_PERCENT)
-    max_seed_percent = tkinter.IntVar(settings_frame, DEFAULT_MAX_AUTO_SEED_PERCENT)
+    min_seed_percent = tkinter.IntVar(settings_frame, DEFAULT_MIN_SEED_PERCENT)
+    max_seed_percent = tkinter.IntVar(settings_frame, DEFAULT_MAX_SEED_PERCENT)
     min_seed_percent_label = tkinter.Label(settings_frame, text="Minimum seed percentage: ")
     max_seed_percent_label = tkinter.Label(settings_frame, text="Maximum seed percentage: ")
     min_seed_percent_input = tkinter.Entry(settings_frame)
