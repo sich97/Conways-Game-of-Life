@@ -44,7 +44,7 @@ def main():
     drawn_cells, pause_signal, canvas, restart_button, pause_button, current_seed, canvas_height_input,\
         canvas_width_input, next_frame_signal, next_frame_button, max_framerate, min_auto_seed_percent,\
         max_auto_seed_percent, draw_seed_or_not, grid, button_apply_drawn_seed,\
-        is_button_apply_drawn_seed_pressed, generation_counter = initialize()
+        is_button_apply_drawn_seed_pressed, generation_counter, shutting_down, window = initialize()
     if VERBOSE:
         print("Initialization done")
 
@@ -52,7 +52,7 @@ def main():
     game_loop(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, canvas, max_framerate, pause_signal,
               pause_button, "new", current_seed, canvas_height_input, canvas_width_input, next_frame_signal,
               next_frame_button, draw_seed_or_not, grid, button_apply_drawn_seed, is_button_apply_drawn_seed_pressed,
-              generation_counter)
+              generation_counter, shutting_down, window)
 
 
 def print_intro():
@@ -94,7 +94,7 @@ def initialize():
     next_frame_button (tkinter.Button), max_framerate (tkinter.IntVar), min_auto_seed_percent (tkinter.IntVar),
     max_auto_seed_percent (tkinter.IntVar), draw_seed_or_not (tkinter.BooleanVar), grid (list of lists),
     button_apply_drawn_seed (tkinter.Button), is_button_apply_drawn_seed_pressed (tkinter.BooleanVar),
-    generation_counter (tkinter.Label)
+    generation_counter (tkinter.Label), shutting_down (tkinter.BooleanVar), window (tkinter.Tk)
     """
     drawn_cells = {}
     current_seed = []
@@ -106,18 +106,19 @@ def initialize():
         max_auto_seed_percent, max_framerate, pause_signal, next_frame_signal,\
         draw_seed_or_not, button_apply_drawn_seed,\
         is_button_apply_drawn_seed_pressed,\
-        generation_counter = create_gui("Conway's Game of Life", drawn_cells, current_seed, grid)
+        generation_counter, shutting_down,\
+        window = create_gui("Conway's Game of Life", drawn_cells, current_seed, grid)
 
     return drawn_cells, pause_signal, canvas, button_new_sim, button_pause_sim, current_seed,\
         canvas_height_input, canvas_width_input, next_frame_signal, next_frame_button, max_framerate,\
         min_auto_seed_percent, max_auto_seed_percent, draw_seed_or_not, grid, button_apply_drawn_seed,\
-           is_button_apply_drawn_seed_pressed, generation_counter
+           is_button_apply_drawn_seed_pressed, generation_counter, shutting_down, window
 
 
 def game_loop(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, canvas, max_framerate, pause_signal,
               pause_button, mode, current_seed, canvas_height_input, canvas_width_input, next_frame_signal,
               next_frame_button, draw_seed_or_not, grid, button_apply_drawn_seed, is_button_apply_drawn_seed_pressed,
-              generation_counter):
+              generation_counter, shutting_down, window):
     """
     Creates and runs a simulation
     :param min_auto_seed_percent: The minimum percentage of the grid which will be alive initially
@@ -157,16 +158,24 @@ def game_loop(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, canvas,
     :type is_button_apply_drawn_seed_pressed: tkinter.BooleanVar
     :param generation_counter: Keeps track of and displays the current generations number
     :type generation_counter: tkinter.Label
+    :param shutting_down: Whether or not the program is shutting down
+    :type shutting_down: tkinter.BooleanVar
+    :param window: The GUI
+    :type window: tkinter.TK
     :return: None
     """
-    # Create new simulation
-    create_simulation(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, canvas, mode, current_seed,
-                      canvas_height_input, canvas_width_input, draw_seed_or_not, grid, button_apply_drawn_seed,
-                      is_button_apply_drawn_seed_pressed, generation_counter)
+    while not shutting_down.get():
+        # Create new simulation
+        create_simulation(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, canvas, mode, current_seed,
+                          canvas_height_input, canvas_width_input, draw_seed_or_not, grid, button_apply_drawn_seed,
+                          is_button_apply_drawn_seed_pressed, generation_counter)
 
-    # Run simulation
-    run_simulation(max_framerate, drawn_cells, pause_signal, canvas, pause_button, grid, next_frame_signal,
-                   next_frame_button, generation_counter)
+        # Run simulation
+        run_simulation(max_framerate, drawn_cells, pause_signal, canvas, pause_button, grid, next_frame_signal,
+                       next_frame_button, generation_counter, shutting_down)
+
+    # Shutdown program
+    window.destroy()
 
 
 def load_seed_from_file(current_seed):
@@ -238,7 +247,7 @@ def create_gui(title, drawn_cells, current_seed, grid):
     min_seed_percent (tkinter.IntVar), max_seed_percent (tkinter.IntVar), max_framerate (tkinter.IntVar),
     pause_signal (tkinter.BooleanVar), next_frame_signal (tkinter.BooleanVar), draw_seed_or_not (tkinter.BooleanVar),
     button_apply_drawn_seed (tkinter.Button), is_button_apply_drawn_seed_pressed (tkinter.BooleanVar),
-    generation_counter (tkinter.Label)
+    generation_counter (tkinter.Label), shutting_down (tkinter.BooleanVar), window (tkinter.Tk)
     """
     if VERBOSE:
         print("Creating canvas")
@@ -258,6 +267,8 @@ def create_gui(title, drawn_cells, current_seed, grid):
     window = tkinter.Tk()
     window.minsize(height=canvas_height, width=canvas_width)
     window.title(title)
+    shutting_down = tkinter.BooleanVar(window, False, "shutting_down")
+    window.protocol("WM_DELETE_WINDOW", lambda: shutting_down.set(True))
 
     # Creating the settings frame
     settings_frame = tkinter.Frame(window)
@@ -333,21 +344,23 @@ def create_gui(title, drawn_cells, current_seed, grid):
                                                 "Replay", current_seed, canvas_height_input, canvas_width_input,
                                                 next_frame_signal, next_frame_button, draw_seed_or_not, grid,
                                                 button_apply_drawn_seed, is_button_apply_drawn_seed_pressed,
-                                                generation_counter)
+                                                generation_counter, shutting_down, window)
 
     # Button for creating a new simulation
     button_new_sim = create_sim_mode_buttons(min_seed_percent, max_seed_percent, drawn_cells, canvas_frame,
                                              canvas, max_framerate, pause_signal, button_pause_sim, "New",
                                              current_seed, canvas_height_input, canvas_width_input, next_frame_signal,
                                              next_frame_button, draw_seed_or_not, grid, button_apply_drawn_seed,
-                                             is_button_apply_drawn_seed_pressed, generation_counter)
+                                             is_button_apply_drawn_seed_pressed, generation_counter, shutting_down,
+                                             window)
 
     # Button for loading an existing simulation
     button_load_sim = create_sim_mode_buttons(min_seed_percent, max_seed_percent, drawn_cells, canvas_frame,
                                               canvas, max_framerate, pause_signal, button_pause_sim, "Load",
                                               current_seed, canvas_height_input, canvas_width_input, next_frame_signal,
                                               next_frame_button, draw_seed_or_not, grid, button_apply_drawn_seed,
-                                              is_button_apply_drawn_seed_pressed, generation_counter)
+                                              is_button_apply_drawn_seed_pressed, generation_counter, shutting_down,
+                                              window)
 
     # Arrange the widgets on screen
     # Settings frame
@@ -385,7 +398,7 @@ def create_gui(title, drawn_cells, current_seed, grid):
 
     return canvas, button_new_sim, button_pause_sim, canvas_height_input, canvas_width_input, next_frame_button,\
         min_seed_percent, max_seed_percent, max_framerate, pause_signal, next_frame_signal, draw_seed_or_not,\
-           button_apply_drawn_seed, is_button_apply_drawn_seed_pressed, generation_counter
+           button_apply_drawn_seed, is_button_apply_drawn_seed_pressed, generation_counter, shutting_down, window
 
 
 def get_opposite_boolean(boolean):
@@ -588,7 +601,8 @@ def create_seed_percent_inputs(settings_frame):
 def create_sim_mode_buttons(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, canvas_frame, canvas,
                             max_framerate, pause_signal, button_pause_sim, mode, current_seed, canvas_height_input,
                             canvas_width_input, next_frame_signal, next_frame_button, draw_seed_or_not, grid,
-                            button_apply_drawn_seed, is_button_apply_drawn_seed_pressed, generation_counter):
+                            button_apply_drawn_seed, is_button_apply_drawn_seed_pressed, generation_counter,
+                            shutting_down, window):
     """
     Creates a button that will call the game loop function with a mode determined by the 'mode' parameter
     :param min_auto_seed_percent: The minimum percentage of the grid which will be alive initially
@@ -631,6 +645,10 @@ def create_sim_mode_buttons(min_auto_seed_percent, max_auto_seed_percent, drawn_
     :type is_button_apply_drawn_seed_pressed: tkinter.BooleanVar
     :param generation_counter: Keeps track of and displays the current generations number
     :type generation_counter: tkinter.Label
+    :param shutting_down: Whether or not the program is shutting down
+    :type shutting_down: tkinter.BooleanVar
+    :param window: The GUI
+    :type window: tkinter.Tk
     :return: vars()[button_name] (tkinter.Button)
     """
     mode_lowercase = mode.lower()
@@ -643,7 +661,7 @@ def create_sim_mode_buttons(min_auto_seed_percent, max_auto_seed_percent, drawn_
                                                                    next_frame_signal, next_frame_button,
                                                                    draw_seed_or_not, grid, button_apply_drawn_seed,
                                                                    is_button_apply_drawn_seed_pressed,
-                                                                   generation_counter))
+                                                                   generation_counter, shutting_down, window))
 
     return vars()[button_name]
 
@@ -936,7 +954,7 @@ def apply_seed(grid, seed, canvas_height, canvas_width):
 
 
 def run_simulation(max_framerate, drawn_cells, pause_signal, canvas, pause_button, grid, next_frame_signal,
-                   next_frame_button, generation_counter):
+                   next_frame_button, generation_counter, shutting_down):
     """
     Generates new generations, draws them on screen, then repeats.
     :param max_framerate: The maximum amount of times per second the program will run this loop
@@ -958,6 +976,8 @@ def run_simulation(max_framerate, drawn_cells, pause_signal, canvas, pause_butto
     :type next_frame_button: tkinter.Button
     :param generation_counter: Keeps track of and displays the current generations number
     :type generation_counter: tkinter.Label
+    :param shutting_down: Whether or not the program is shutting down
+    :type shutting_down: tkinter.BooleanVar
     :return: None
     """
 
@@ -972,7 +992,7 @@ def run_simulation(max_framerate, drawn_cells, pause_signal, canvas, pause_butto
     if VERBOSE:
         print("First frame drawn")
 
-    while True:
+    while not shutting_down.get():
         # Start measuring time
         start = timer()
 
