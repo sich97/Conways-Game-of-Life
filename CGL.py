@@ -93,15 +93,13 @@ def initialize():
     max_auto_seed_percent (tkinter.IntVar)
     """
     drawn_cells = {}
-    pause_signal = Signal("pause_signal", False)
-    next_frame_signal = Signal("next_frame_signal", False)
     current_seed = []
 
     # Creates the graphical window
     canvas, button_new_sim, button_pause_sim, canvas_height_input,\
         canvas_width_input, next_frame_button, min_auto_seed_percent,\
-        max_auto_seed_percent, max_framerate = create_gui("Conway's Game of Life", pause_signal, drawn_cells,
-                                                          current_seed, next_frame_signal)
+        max_auto_seed_percent, max_framerate, pause_signal, next_frame_signal = create_gui("Conway's Game of Life",
+                                                                                           drawn_cells, current_seed)
 
     return drawn_cells, pause_signal, canvas, button_new_sim, button_pause_sim, current_seed,\
         canvas_height_input, canvas_width_input, next_frame_signal, next_frame_button, max_framerate,\
@@ -124,7 +122,7 @@ def game_loop(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, canvas,
     :param max_framerate: The maximum amount of times per second the program will run this loop
     :type max_framerate: tkinter.IntVar
     :param pause_signal: The signal which controls whether or not to pause the loop
-    :type pause_signal: Signal
+    :type pause_signal: tkinter.BooleanVar
     :param pause_button: The button which changes the pause_signal
     :type pause_button: tkinter.Button
     :param mode: Whether or not to create a new simulation, load existing one or simply replay the current one
@@ -137,7 +135,7 @@ def game_loop(min_auto_seed_percent, max_auto_seed_percent, drawn_cells, canvas,
     :type canvas_width_input: tkinter.Entry
     :param next_frame_signal: The signal which controls whether or not to move to the next frame
     while the simulation is paused
-    :type next_frame_signal: Signal
+    :type next_frame_signal: tkinter.BooleanVar
     :param next_frame_button: The button which changes the next_frame_signal
     :type next_frame_button: tkinter.Button
     :return: None
@@ -204,23 +202,19 @@ def load_seed_from_file(current_seed):
     return canvas_height, canvas_width
 
 
-def create_gui(title, pause_signal, drawn_cells, current_seed, next_frame_signal):
+def create_gui(title, drawn_cells, current_seed):
     """
     Uses tkinter to create a graphical user interface for visualizing the simulation and controlling the program.
     :param title: The window title
     :type title: string
-    :param pause_signal: The signal which controls whether or not to pause the loop
-    :type pause_signal: Signal
     :param drawn_cells: The dictionary of already rendered pixels
     :type drawn_cells: dict
     :param current_seed: The seed that determines which cells start as alive or note
     :type current_seed: list of lists
-    :param next_frame_signal: The signal which controls whether or not to move to the next frame
-    while the simulation is paused
-    :type next_frame_signal: Signal
     :return: canvas (tkinter.Canvas), button_new_sim (tkinter.Button),
     button_pause_sim (tkinter.Button), canvas_height_input (tkinter.Entry), canvas_width_input (tkinter.Entry),
-    min_seed_percent (tkinter.IntVar), max_seed_percent (tkinter.IntVar), max_framerate (tkinter.IntVar)
+    min_seed_percent (tkinter.IntVar), max_seed_percent (tkinter.IntVar), max_framerate (tkinter.IntVar),
+    pause_signal (tkinter.BooleanVar), next_frame_signal (tkinter.BooleanVar)
     """
     if VERBOSE:
         print("Creating canvas")
@@ -279,11 +273,15 @@ def create_gui(title, pause_signal, drawn_cells, current_seed, next_frame_signal
                                                                           max_framerate_input_status))
 
     # Button for pausing the simulation
-    button_pause_sim = tkinter.Button(canvas_frame, text="Pause", command=lambda: pause_signal.change_state())
+    pause_signal = tkinter.BooleanVar(canvas_frame, False, "pause_signal")
+    button_pause_sim = tkinter.Button(canvas_frame, text="Pause",
+                                      command=lambda: pause_signal.set(get_opposite_boolean(pause_signal.get())))
 
     # Button for manually moving to the next frame while the simulation is paused
+    next_frame_signal = tkinter.BooleanVar(canvas_frame, False, "next_frame_signal")
     next_frame_button = tkinter.Button(canvas_frame, text="Next frame",
-                                       command=lambda: next_frame_signal.change_state())
+                                       command=lambda: next_frame_signal.set(get_opposite_boolean(
+                                           next_frame_signal.get())))
 
     # Button for replaying the current simulation
     button_replay_sim = create_sim_mode_buttons(min_seed_percent, max_seed_percent, drawn_cells,
@@ -335,7 +333,14 @@ def create_gui(title, pause_signal, drawn_cells, current_seed, next_frame_signal
         print("Canvas created")
 
     return canvas, button_new_sim, button_pause_sim, canvas_height_input, canvas_width_input, next_frame_button,\
-        min_seed_percent, max_seed_percent, max_framerate
+        min_seed_percent, max_seed_percent, max_framerate, pause_signal, next_frame_signal
+
+
+def get_opposite_boolean(boolean):
+    if boolean:
+        return False
+    else:
+        return True
 
 
 def create_max_framerate_inputs(settings_frame):
@@ -511,7 +516,7 @@ def create_sim_mode_buttons(min_auto_seed_percent, max_auto_seed_percent, drawn_
     :param max_framerate: The maximum amount of times per second the program will run this loop
     :type max_framerate: tkinter.IntVar
     :param pause_signal: The signal which controls whether or not to pause the loop
-    :type pause_signal: Signal
+    :type pause_signal: tkinter.BooleanVar
     :param button_pause_sim: The button which controls the pause signal
     :type button_pause_sim: tkinter.Button
     :param mode: Which mode the new simulation will be (replay of the current one, create a new one
@@ -525,7 +530,7 @@ def create_sim_mode_buttons(min_auto_seed_percent, max_auto_seed_percent, drawn_
     :type canvas_width_input: tkinter.Entry
     :param next_frame_signal: The signal which controls whether or not to move to the next frame
     while the simulation is paused
-    :type next_frame_signal: Signal
+    :type next_frame_signal: tkinter.BooleanVar
     :param next_frame_button: The button which changes the next_frame_signal
     :type next_frame_button: tkinter.Button
     :return: vars()[button_name] (tkinter.Button)
@@ -777,7 +782,7 @@ def run_simulation(max_framerate, drawn_cells, pause_signal, canvas, pause_butto
     :param drawn_cells: The dictionary of already rendered pixels
     :type drawn_cells: dict
     :param pause_signal: The signal which controls whether or not to pause the loop
-    :type pause_signal: Signal
+    :type pause_signal: tkinter.BooleanVar
     :param canvas: The instance of a tkinter canvas that visualizes the game
     :type canvas: tkinter.Canvas
     :param pause_button: The button which changes the pause_signal
@@ -786,7 +791,7 @@ def run_simulation(max_framerate, drawn_cells, pause_signal, canvas, pause_butto
     :type grid: list of lists
     :param next_frame_signal: The signal which controls whether or not to move to the next frame
     while the simulation is paused
-    :type next_frame_signal: Signal
+    :type next_frame_signal: tkinter.BooleanVar
     :param next_frame_button: The button which changes the next_frame_signal
     :type next_frame_button: tkinter.Button
     :return: None
@@ -809,10 +814,10 @@ def run_simulation(max_framerate, drawn_cells, pause_signal, canvas, pause_butto
         # Reset
         pause_button.config(text="Pause")
         next_frame_button.grid_remove()
-        next_frame_signal.set_state(False)
+        next_frame_signal.set(False)
 
         # If the pause button has been pressed
-        if pause_signal.get_state():
+        if pause_signal.get():
             # Set the pause button's text to "Resume"
             pause_button.config(text="Resume")
 
@@ -820,7 +825,7 @@ def run_simulation(max_framerate, drawn_cells, pause_signal, canvas, pause_butto
             next_frame_button.grid(row=0, column=2)
 
             # Wait for pause_signal to be false, or next_frame_signal to be true
-            while pause_signal.get_state() and not next_frame_signal.get_state():
+            while pause_signal.get() and not next_frame_signal.get():
                 canvas.update()
                 time.sleep(0.01)
 
@@ -1093,55 +1098,6 @@ def create_next_generation(grid, cells_to_be_killed, cells_to_be_revived):
 
     if VERBOSE:
         print("Next generation created")
-
-
-class Signal:
-    """
-    Mainly used to control and break loops
-    """
-    def __init__(self, name, initial_state):
-        """
-        Sets the signal to the desired initial state.
-        Also stores the name of the object used to create the instance.
-        :param name: The name of the object used when instantiating.
-        :type name: string
-        :param initial_state: The initial signal
-        :type initial_state: bool
-        """
-        self.state = initial_state
-        self.name = name
-
-    def get_state(self):
-        """
-        Returns the current state of the signal
-        :return: self.state (bool)
-        """
-        return self.state
-
-    def set_state(self, new_state):
-        """
-        Sets the signal state to a desired truth value
-        :param new_state: The new truth value
-        :type new_state: bool
-        :return: old_state (bool)
-        """
-        old_state = self.state
-        self.state = new_state
-
-        return old_state
-
-    def change_state(self):
-        """
-        Changes the signal state to the opposite of what it currently is
-        :return: self.state (bool)
-        """
-        if self.state:
-            self.set_state(False)
-
-        else:
-            self.set_state(True)
-
-        return self.state
 
 
 if __name__ == '__main__':
